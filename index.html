@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Bodie Get A Beer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,10 +15,17 @@
       </div>
       <div class="header-buttons">
         <button id="soundToggle" class="hud-btn" type="button" aria-pressed="true">Sound: On</button>
+        <button id="compactModeToggle" class="hud-btn" type="button" aria-pressed="false">Compact: Auto</button>
         <button id="pauseBtn" class="hud-btn" type="button">Pause (P)</button>
         <button id="resetBtn" class="hud-btn" type="button">Reset (R)</button>
       </div>
     </header>
+
+    <section id="mobileNowDoing" class="mobile-now-doing" aria-live="polite">
+      <span id="mobileActionText">Now Doing: Idle</span>
+      <span id="mobileCarText">Car: none</span>
+      <span id="mobileMultiplierText">1.0x</span>
+    </section>
 
     <section class="hud-grid" aria-label="Run status">
       <article class="stat-card">
@@ -62,16 +69,18 @@
     </section>
 
     <main class="main-grid">
-      <section class="panel queue-panel">
+      <section class="panel queue-panel" id="queuePanel">
         <div class="panel-head">
+          <button class="panel-toggle" id="queuePanelToggle" type="button" aria-expanded="true">Queue</button>
           <h2>Car Queue</h2>
           <p>Pick a victim and make it run.</p>
         </div>
         <div id="carQueue" class="car-queue" role="listbox" aria-label="Cars waiting for repairs"></div>
       </section>
 
-      <section class="panel action-panel">
+      <section class="panel action-panel" id="actionPanel">
         <div class="panel-head">
+          <button class="panel-toggle" id="actionPanelToggle" type="button" aria-expanded="true">Bodie</button>
           <h2>Action Bay</h2>
           <p id="selectedCarText">Selected car: none</p>
         </div>
@@ -136,14 +145,31 @@
         </div>
       </section>
 
-      <section class="panel log-panel">
+      <section class="panel log-panel" id="logPanel">
         <div class="panel-head">
+          <button class="panel-toggle" id="logPanelToggle" type="button" aria-expanded="false">Log</button>
           <h2>Shop Log</h2>
           <p>Bodie commentary, poor decisions, and miracles.</p>
         </div>
         <ul id="logFeed" class="log-feed" aria-live="polite"></ul>
       </section>
     </main>
+
+    <aside id="actionDock" class="action-dock" aria-label="Mobile action dock">
+      <div class="dock-row beer-segment" id="mobileBeerSegment" role="radiogroup" aria-label="Quick beer select"></div>
+      <div class="dock-row dock-actions">
+        <button id="dockDrinkBtn" type="button">Drink</button>
+        <button id="dockFixBtn" type="button">Fix</button>
+        <button id="dockCigBtn" type="button">Cig</button>
+        <button id="dockDabBtn" type="button">Dab</button>
+        <button id="dockThingBtn" type="button">Thing</button>
+        <button id="dockPauseBtn" type="button">Pause</button>
+      </div>
+      <div class="dock-row dock-cars">
+        <span id="dockSelectedCar" class="dock-selected-car">Selected: none</span>
+        <div id="mobileCarQuickSelect" class="mobile-car-quick-select"></div>
+      </div>
+    </aside>
   </div>
 
   <div id="eventOverlay" class="event-overlay hidden" role="dialog" aria-live="assertive" aria-modal="true">

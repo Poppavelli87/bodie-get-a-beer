@@ -7,7 +7,7 @@
   };
 
   const STEP_MS = 1000 / 60;
-  const MAX_LOG_ENTRIES = 14;
+  const MAX_LOG_ENTRIES = 30;
 
   const TUNING = {
     // === Shift pacing and scoring ===
@@ -245,8 +245,10 @@
     logs: [],
     settings: {
       soundOn: true,
+      compactMode: "auto",
     },
     rngSeed: 0x43f4b6d1,
+    uiPanels: { queueOpen: true, actionOpen: true, logOpen: false, initialized: false },
   };
 
   const ui = {
@@ -283,8 +285,34 @@
     eventActionBtn: document.getElementById("eventActionBtn"),
     bodieStage: document.getElementById("bodieStage"),
     bodieCaption: document.getElementById("bodieCaption"),
+    compactModeToggle: document.getElementById("compactModeToggle"),
+    mobileNowDoing: document.getElementById("mobileNowDoing"),
+    mobileActionText: document.getElementById("mobileActionText"),
+    mobileCarText: document.getElementById("mobileCarText"),
+    mobileMultiplierText: document.getElementById("mobileMultiplierText"),
+    queuePanel: document.getElementById("queuePanel"),
+    actionPanel: document.getElementById("actionPanel"),
+    logPanel: document.getElementById("logPanel"),
+    queuePanelToggle: document.getElementById("queuePanelToggle"),
+    actionPanelToggle: document.getElementById("actionPanelToggle"),
+    logPanelToggle: document.getElementById("logPanelToggle"),
+    actionDock: document.getElementById("actionDock"),
+    mobileBeerSegment: document.getElementById("mobileBeerSegment"),
+    dockDrinkBtn: document.getElementById("dockDrinkBtn"),
+    dockFixBtn: document.getElementById("dockFixBtn"),
+    dockCigBtn: document.getElementById("dockCigBtn"),
+    dockDabBtn: document.getElementById("dockDabBtn"),
+    dockThingBtn: document.getElementById("dockThingBtn"),
+    dockPauseBtn: document.getElementById("dockPauseBtn"),
+    dockSelectedCar: document.getElementById("dockSelectedCar"),
+    mobileCarQuickSelect: document.getElementById("mobileCarQuickSelect"),
   };
 
+  let currentLayout = "desktop";
+  let reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let autoPausedByVisibility = false;
+  let lastQueueSignature = "";
+  let lastLogSignature = "";
   let audioCtx = null;
   let rafId = 0;
   let lastFrameTs = performance.now();
@@ -292,6 +320,63 @@
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  function isTouchDevice() {
+    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
+  }
+
+  function isSmallScreen() {
+    return Math.min(window.innerWidth, window.innerHeight) < 700;
+  }
+
+  function isMobileUA() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  }
+
+  function isMobileLayout() {
+    return currentLayout !== "desktop";
+  }
+
+  function getCompactModeEnabled() {
+    if (state.settings.compactMode === "on") return true;
+    if (state.settings.compactMode === "off") return false;
+    return isSmallScreen();
+  }
+
+  function updatePanelCollapsedStates() {
+    const isPortraitMobile = currentLayout === "mobilePortrait";
+    ui.queuePanel.classList.toggle("collapsed", isPortraitMobile && !state.uiPanels.queueOpen);
+    ui.actionPanel.classList.toggle("collapsed", isPortraitMobile && !state.uiPanels.actionOpen);
+    ui.logPanel.classList.toggle("collapsed", isPortraitMobile && !state.uiPanels.logOpen);
+    ui.queuePanelToggle.setAttribute("aria-expanded", String(state.uiPanels.queueOpen));
+    ui.actionPanelToggle.setAttribute("aria-expanded", String(state.uiPanels.actionOpen));
+    ui.logPanelToggle.setAttribute("aria-expanded", String(state.uiPanels.logOpen));
+  }
+
+  function updateLayout() {
+    const vw = window.visualViewport ? Math.round(window.visualViewport.width) : window.innerWidth;
+    const vh = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
+    if (vw >= 900) currentLayout = "desktop";
+    else currentLayout = vh >= vw ? "mobilePortrait" : "mobileLandscape";
+
+    document.body.dataset.layout = currentLayout;
+    document.body.dataset.touch = String(isTouchDevice());
+    document.body.dataset.mobileUa = String(isMobileUA());
+    document.body.dataset.compact = String(getCompactModeEnabled());
+
+    if (currentLayout !== "mobilePortrait") {
+      state.uiPanels.queueOpen = true;
+      state.uiPanels.actionOpen = true;
+      state.uiPanels.logOpen = true;
+    } else if (state.uiPanels.initialized !== true) {
+      state.uiPanels.queueOpen = true;
+      state.uiPanels.actionOpen = true;
+      state.uiPanels.logOpen = false;
+      state.uiPanels.initialized = true;
+    }
+
+    updatePanelCollapsedStates();
   }
 
   function rand() {
@@ -405,6 +490,17 @@
     }
   }
 
+  function animateTapFeedback(button) {
+    if (!button) return;
+    button.classList.remove("tap-feedback");
+    button.offsetWidth;
+    button.classList.add("tap-feedback");
+    setTimeout(() => button.classList.remove("tap-feedback"), 130);
+    if (state.settings.soundOn) {
+      playTone("tap");
+    }
+  }
+
   function playTone(kind) {
     if (!state.settings.soundOn) {
       return;
@@ -451,6 +547,9 @@
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || "{}");
       if (typeof parsed.soundOn === "boolean") {
         state.settings.soundOn = parsed.soundOn;
+      }
+      if (["auto", "on", "off"].includes(parsed.compactMode)) {
+        state.settings.compactMode = parsed.compactMode;
       }
     } catch (_) {
       state.settings.soundOn = true;
@@ -553,6 +652,8 @@
     state.bodie.overlayMode = "none";
     state.bodie.overlayUntil = 0;
     state.bodie.caption = "Precision requires carbonation.";
+    lastQueueSignature = "";
+    lastLogSignature = "";
 
     spawnCar();
     spawnCar();
@@ -1231,13 +1332,45 @@
 
   function bindEvents() {
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerdown", ensureAudioContext);
+    window.addEventListener("pointerdown", ensureAudioContext, { passive: true });
+    window.addEventListener("resize", updateLayout);
+    window.addEventListener("orientationchange", updateLayout);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateLayout);
+    }
 
-    ui.pauseBtn.addEventListener("click", () => {
-      ensureAudioContext();
-      togglePause();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        if (!state.paused && !state.shiftEnded && !state.event) {
+          state.paused = true;
+          autoPausedByVisibility = true;
+          addLog("Auto-paused while tab is hidden.");
+        }
+        return;
+      }
+      if (autoPausedByVisibility && !state.shiftEnded && !state.event) {
+        state.paused = false;
+        autoPausedByVisibility = false;
+        addLog("Resumed after returning to tab.");
+      }
     });
-    ui.resetBtn.addEventListener("click", () => resetRun(false));
+
+    ui.gameShell.addEventListener("touchmove", (event) => {
+      if (!isMobileLayout()) return;
+      if (event.target.closest(".car-queue") || event.target.closest(".log-feed")) return;
+      event.preventDefault();
+    }, { passive: false });
+
+    const tapAndRun = (button, fn) => {
+      button.addEventListener("click", () => {
+        ensureAudioContext();
+        animateTapFeedback(button);
+        fn();
+      });
+    };
+
+    tapAndRun(ui.pauseBtn, togglePause);
+    tapAndRun(ui.resetBtn, () => resetRun(false));
     ui.soundToggle.addEventListener("click", () => {
       state.settings.soundOn = !state.settings.soundOn;
       if (state.settings.soundOn) {
@@ -1246,43 +1379,62 @@
       }
       saveSettings();
     });
-    ui.drinkBtn.addEventListener("click", () => {
-      ensureAudioContext();
-      startDrink();
-    });
-    ui.fixBtn.addEventListener("click", () => {
-      ensureAudioContext();
-      startRepair();
-    });
-    ui.cancelRepairBtn.addEventListener("click", cancelRepair);
-    ui.cigBtn.addEventListener("click", () => {
-      ensureAudioContext();
-      startBonus("cigarette");
-    });
-    ui.dabBtn.addEventListener("click", () => {
-      ensureAudioContext();
-      startBonus("dab");
-    });
-    ui.thingBtn.addEventListener("click", () => {
-      ensureAudioContext();
-      startBonus("thing");
+
+    ui.compactModeToggle.addEventListener("click", () => {
+      const modeOrder = ["auto", "on", "off"];
+      const next = modeOrder[(modeOrder.indexOf(state.settings.compactMode) + 1) % modeOrder.length];
+      state.settings.compactMode = next;
+      saveSettings();
+      updateLayout();
     });
 
-    ui.beerList.addEventListener("click", (event) => {
-      const target = event.target.closest(".beer-option");
+    tapAndRun(ui.drinkBtn, startDrink);
+    tapAndRun(ui.fixBtn, startRepair);
+    tapAndRun(ui.cancelRepairBtn, cancelRepair);
+    tapAndRun(ui.cigBtn, () => startBonus("cigarette"));
+    tapAndRun(ui.dabBtn, () => startBonus("dab"));
+    tapAndRun(ui.thingBtn, () => startBonus("thing"));
+
+    tapAndRun(ui.dockDrinkBtn, startDrink);
+    tapAndRun(ui.dockFixBtn, startRepair);
+    tapAndRun(ui.dockCigBtn, () => startBonus("cigarette"));
+    tapAndRun(ui.dockDabBtn, () => startBonus("dab"));
+    tapAndRun(ui.dockThingBtn, () => startBonus("thing"));
+    tapAndRun(ui.dockPauseBtn, togglePause);
+
+    ui.queuePanelToggle.addEventListener("click", () => {
+      state.uiPanels.queueOpen = !state.uiPanels.queueOpen;
+      updatePanelCollapsedStates();
+    });
+    ui.actionPanelToggle.addEventListener("click", () => {
+      state.uiPanels.actionOpen = !state.uiPanels.actionOpen;
+      updatePanelCollapsedStates();
+    });
+    ui.logPanelToggle.addEventListener("click", () => {
+      state.uiPanels.logOpen = !state.uiPanels.logOpen;
+      updatePanelCollapsedStates();
+    });
+
+    const onBeerTap = (event) => {
+      const target = event.target.closest("[data-index]");
       if (!target) return;
       const idx = Number(target.dataset.index);
       if (!Number.isFinite(idx)) return;
       selectBeer(idx, false);
-    });
+      animateTapFeedback(target);
+    };
+    ui.beerList.addEventListener("click", onBeerTap);
+    ui.mobileBeerSegment.addEventListener("click", onBeerTap);
 
-    ui.carQueue.addEventListener("click", (event) => {
-      const target = event.target.closest(".car-card");
+    const onCarTap = (event) => {
+      const target = event.target.closest("[data-car-id]");
       if (!target) return;
       const id = Number(target.dataset.carId);
       if (!Number.isFinite(id)) return;
       state.selectedCarId = id;
-    });
+    };
+    ui.carQueue.addEventListener("click", onCarTap);
+    ui.mobileCarQuickSelect.addEventListener("click", onCarTap);
 
     ui.eventActionBtn.addEventListener("click", () => {
       if (state.event && state.event.type === "puke") {
@@ -1318,55 +1470,82 @@
       })
       .join("");
     ui.beerList.innerHTML = html;
+
+    ui.mobileBeerSegment.innerHTML = DRINKS.map((beer, index) => {
+      const selected = index === state.selectedBeerIndex;
+      const short = beer.id === "craftipa" ? "IPA" : beer.name.split(" ")[0];
+      return `<button type="button" class="segment-btn ${selected ? "selected" : ""}" data-index="${index}" role="radio" aria-checked="${selected}">${short}</button>`;
+    }).join("");
   }
 
   function renderQueue() {
-    if (state.carQueue.length === 0) {
-      ui.carQueue.innerHTML = "<p>No cars waiting. Enjoy the silence.</p>";
-      return;
+    const signature = JSON.stringify({
+      selected: state.selectedCarId,
+      actionCar: state.currentAction?.meta?.carId || null,
+      queue: state.carQueue.map((car) => [
+        car.id,
+        Math.round(car.remainingRepairMs / 120),
+        Math.round(car.patienceMs / 120),
+      ]),
+    });
+
+    if (signature !== lastQueueSignature) {
+      if (state.carQueue.length === 0) {
+        ui.carQueue.innerHTML = "<p>No cars waiting. Enjoy the silence.</p>";
+      } else {
+        const html = state.carQueue
+          .map((car) => {
+            const selected = car.id === state.selectedCarId;
+            const active =
+              state.currentAction &&
+              state.currentAction.type === "repair" &&
+              state.currentAction.meta.carId === car.id;
+            const patiencePct = clamp((car.patienceMs / car.maxPatienceMs) * 100, 0, 100);
+            const repairPct = clamp(
+              ((car.repairTimeMs - car.remainingRepairMs) / car.repairTimeMs) * 100,
+              0,
+              100
+            );
+            const statusText = active
+              ? `In bay: ${Math.round(repairPct)}% done`
+              : `Repair ${formatSeconds(car.remainingRepairMs)} / patience ${formatSeconds(car.patienceMs)}`;
+            return `
+              <button
+                class="car-card ${selected ? "selected" : ""}"
+                type="button"
+                data-car-id="${car.id}"
+                role="option"
+                aria-selected="${selected ? "true" : "false"}"
+              >
+                <div class="title">
+                  <span class="name">${car.name}</span>
+                  <span class="tier">${car.difficultyTier}</span>
+                </div>
+                <p class="stats">Base ${car.basePoints} pts | ${formatSeconds(car.repairTimeMs)} repair</p>
+                <p class="sub">${statusText}</p>
+                <div class="patience-track" aria-hidden="true">
+                  <div class="patience-fill" style="width:${patiencePct.toFixed(1)}%"></div>
+                </div>
+              </button>
+            `;
+          })
+          .join("");
+        ui.carQueue.innerHTML = html;
+      }
+      lastQueueSignature = signature;
     }
-    const html = state.carQueue
-      .map((car) => {
-        const selected = car.id === state.selectedCarId;
-        const active =
-          state.currentAction &&
-          state.currentAction.type === "repair" &&
-          state.currentAction.meta.carId === car.id;
-        const patiencePct = clamp((car.patienceMs / car.maxPatienceMs) * 100, 0, 100);
-        const repairPct = clamp(
-          ((car.repairTimeMs - car.remainingRepairMs) / car.repairTimeMs) * 100,
-          0,
-          100
-        );
-        const statusText = active
-          ? `In bay: ${Math.round(repairPct)}% done`
-          : `Repair ${formatSeconds(car.remainingRepairMs)} / patience ${formatSeconds(car.patienceMs)}`;
-        return `
-          <button
-            class="car-card ${selected ? "selected" : ""}"
-            type="button"
-            data-car-id="${car.id}"
-            role="option"
-            aria-selected="${selected ? "true" : "false"}"
-          >
-            <div class="title">
-              <span class="name">${car.name}</span>
-              <span class="tier">${car.difficultyTier}</span>
-            </div>
-            <p class="stats">Base ${car.basePoints} pts | ${formatSeconds(car.repairTimeMs)} repair</p>
-            <p class="sub">${statusText}</p>
-            <div class="patience-track" aria-hidden="true">
-              <div class="patience-fill" style="width:${patiencePct.toFixed(1)}%"></div>
-            </div>
-          </button>
-        `;
-      })
+
+    ui.mobileCarQuickSelect.innerHTML = state.carQueue
+      .slice(0, 4)
+      .map((car, idx) => `<button type="button" class="quick-car ${car.id === state.selectedCarId ? "selected" : ""}" data-car-id="${car.id}">#${idx + 1}</button>`)
       .join("");
-    ui.carQueue.innerHTML = html;
   }
 
   function renderLogs() {
+    const signature = state.logs.join("|");
+    if (signature === lastLogSignature) return;
     ui.logFeed.innerHTML = state.logs.map((line) => `<li><em>${line}</em></li>`).join("");
+    lastLogSignature = signature;
   }
 
   function renderActionStatus() {
@@ -1449,15 +1628,29 @@
 
   function renderButtons() {
     const canAct = canStartAction();
-    ui.fixBtn.disabled = !canAct || !findSelectedCar();
+    const hasCar = !!findSelectedCar();
+    ui.fixBtn.disabled = !canAct || !hasCar;
     ui.drinkBtn.disabled = !canAct;
     ui.cigBtn.disabled = !canAct;
     ui.dabBtn.disabled = !canAct;
     ui.thingBtn.disabled = !canAct;
     ui.cancelRepairBtn.disabled = !(state.currentAction && state.currentAction.type === "repair");
+
+    ui.dockFixBtn.disabled = ui.fixBtn.disabled;
+    ui.dockDrinkBtn.disabled = ui.drinkBtn.disabled;
+    ui.dockCigBtn.disabled = ui.cigBtn.disabled;
+    ui.dockDabBtn.disabled = ui.dabBtn.disabled;
+    ui.dockThingBtn.disabled = ui.thingBtn.disabled;
+
     ui.pauseBtn.textContent = state.paused ? "Resume (P)" : "Pause (P)";
+    ui.dockPauseBtn.textContent = state.paused ? "Resume" : "Pause";
+
     ui.soundToggle.textContent = state.settings.soundOn ? "Sound: On" : "Sound: Off";
     ui.soundToggle.setAttribute("aria-pressed", String(state.settings.soundOn));
+
+    const compactText = state.settings.compactMode === "on" ? "Compact: On" : state.settings.compactMode === "off" ? "Compact: Off" : "Compact: Auto";
+    ui.compactModeToggle.textContent = compactText;
+    ui.compactModeToggle.setAttribute("aria-pressed", String(getCompactModeEnabled()));
   }
 
   function renderHUD() {
@@ -1481,6 +1674,12 @@
     ui.selectedCarText.textContent = selected
       ? `Selected car: ${selected.name} (${selected.difficultyTier})`
       : "Selected car: none";
+
+    const actionText = state.currentAction ? state.currentAction.label : state.paused ? "Paused" : "Idle";
+    ui.mobileActionText.textContent = `Now Doing: ${actionText}`;
+    ui.mobileCarText.textContent = selected ? `Car: ${selected.name}` : "Car: none";
+    ui.mobileMultiplierText.textContent = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
+    ui.dockSelectedCar.textContent = selected ? `Selected: ${selected.name}` : "Selected: none";
   }
 
   function renderBodie() {
@@ -1492,16 +1691,18 @@
   }
 
   function renderDangerVisuals() {
-    const wobble = clamp((state.drunkMeter - 76) / 24, 0, 1);
+    const motionScale = reduceMotion ? 0.2 : isMobileLayout() ? 0.55 : 1;
+    const wobble = clamp((state.drunkMeter - 76) / 24, 0, 1) * motionScale;
     const danger = clamp(
       Math.max((state.drunkMeter - 88) / 12, state.pukeRisk / TUNING.PUKERISK_MAX),
       0,
       1
-    );
+    ) * (reduceMotion ? 0.7 : 1);
     ui.gameShell.style.setProperty("--wobble-intensity", wobble.toFixed(3));
     ui.gameShell.style.setProperty("--danger-vignette", danger.toFixed(3));
+    ui.gameShell.style.setProperty("--effect-strength", String(motionScale));
     ui.gameShell.classList.toggle("is-wobbly", wobble > 0.02);
-    ui.gameShell.classList.toggle("is-timewarp", state.bodie.overlayMode === "timewarp");
+    ui.gameShell.classList.toggle("is-timewarp", state.bodie.overlayMode === "timewarp" && !reduceMotion);
   }
 
   function render() {
@@ -1520,8 +1721,10 @@
   function frame(ts) {
     const delta = Math.min(120, ts - lastFrameTs);
     lastFrameTs = ts;
-    tick(delta);
-    render();
+    if (document.visibilityState !== "hidden") {
+      tick(delta);
+      render();
+    }
     rafId = requestAnimationFrame(frame);
   }
 
@@ -1531,6 +1734,20 @@
     }
     lastFrameTs = performance.now();
     rafId = requestAnimationFrame(frame);
+  }
+
+  function setupMotionPreferenceListener() {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const applyMotion = () => {
+      reduceMotion = motionQuery.matches;
+      document.body.dataset.reducedMotion = String(reduceMotion);
+    };
+    applyMotion();
+    if (typeof motionQuery.addEventListener === "function") {
+      motionQuery.addEventListener("change", applyMotion);
+    } else if (typeof motionQuery.addListener === "function") {
+      motionQuery.addListener(applyMotion);
+    }
   }
 
   function renderGameToText() {
@@ -1603,6 +1820,8 @@
   window.advanceTime = advanceTime;
 
   loadStorage();
+  setupMotionPreferenceListener();
+  updateLayout();
   resetRun(true);
   bindEvents();
   startLoop();
