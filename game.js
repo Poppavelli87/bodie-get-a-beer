@@ -10,8 +10,8 @@
   const MAX_LOG_ENTRIES = 14;
 
   const TUNING = {
+    // === Shift pacing and scoring ===
     RUN_DURATION_MS: 3 * 60 * 1000,
-    BASELINE_DRAIN_PER_SEC: 4.8,
     SWEET_SPOT_MIN: 70,
     SWEET_SPOT_MAX: 85,
     STREAK_STEP_MS: 5000,
@@ -22,10 +22,8 @@
     PUKERISK_THRESHOLD: 100,
     PUKERISK_MAX: 120,
     PUKERISK_COOLDOWN_MS: 7500,
-    KO_OVERLOAD_MS: 3200,
     KO_WAKE_DELAY_MS: 3200,
     KO_TIME_PENALTY_MS: 6500,
-    KO_WAKE_METER: 56,
     KO_WAKE_RISK: 20,
     PUKE_EVENT_MS: 2000,
     PUKE_MASHES_REQUIRED: 17,
@@ -35,37 +33,75 @@
     START_SPAWN_INTERVAL_MS: 6800,
     END_SPAWN_INTERVAL_MS: 3000,
     REPAIR_CANCEL_KEEP_RATIO: 0.45,
+
+    // === Intoxication model (v1.1) ===
+    BAC_BASE_DECAY_PER_SEC: 0.044,
+    BAC_REPAIR_DECAY_BONUS_PER_SEC: 0.014,
+    BAC_HYDRATION_DECAY_BONUS_PER_SEC: 0.012,
+    BAC_CIG_DECAY_MULTIPLIER: 0.68,
+    BAC_DAB_DECAY_MULTIPLIER: 0.9,
+    DRUNK_CURVE_DENOMINATOR: 1.2,
+    DRUNK_CURVE_POWER: 0.75,
+    PUKE_HIGH_METER_THRESHOLD: 92,
+    PUKE_HIGH_METER_GRACE_MS: 2500,
+    PUKE_HIGH_METER_GAIN_PER_SEC: 9,
+    PUKE_OVERLOAD_BAC_THRESHOLD: 1.25,
+    PUKE_OVERLOAD_GAIN_PER_SEC: 28,
+    PUKE_UNDER_CONTROL_THRESHOLD: 85,
+    PUKE_UNDER_CONTROL_DECAY_PER_SEC: 13,
+    KO_BAC_THRESHOLD: 1.45,
+    KO_BAC_OVERLOAD_WINDOW_MS: 1500,
+    KO_RANDOM_BAC_THRESHOLD: 1.36,
+    KO_RANDOM_CHANCE_PER_SEC: 0.08,
+    HANGOVER_CRASH_MS: 10000,
+    HANGOVER_REPAIR_SPEED_MULTIPLIER: 0.62,
+    KO_WAKE_BAC: 0.64,
+    FLOW_BUILD_PER_SEC: 0.1,
+    FLOW_DECAY_PER_SEC: 0.16,
+    FLOW_REPAIR_SPEED_MAX_BONUS: 0.22,
+    FLOW_STREAK_MAX_BONUS: 0.16,
+    FLOW_DECAY_REDUCTION_MAX: 0.18,
+
+    // === Legacy bonus effects ===
     CIG_EFFECT_MS: 12000,
-    CIG_DRAIN_MULTIPLIER: 0.78,
     DAB_EFFECT_MS: 11000,
     DAB_REPAIR_SPEED_MULTIPLIER: 1.3,
-    OVERLOAD_DRAIN_MULTIPLIER: 0.45,
+    MYSTERY_GOD_MODE_MS: 5500,
+    MYSTERY_REPAIR_SPEED_MULTIPLIER: 1.45,
   };
 
   const DRINKS = [
     {
-      id: "lager",
-      name: "Lite Lager",
-      gain: 18,
-      risk: 4,
-      durationMs: 2100,
-      note: "+18 meter / low risk",
+      id: "light",
+      name: "Light Beer",
+      bacGain: 0.18,
+      risk: 3,
+      durationMs: 1700,
+      note: "+0.18 BAC / low risk",
     },
     {
-      id: "ipa",
-      name: "Tallboy IPA",
-      gain: 31,
-      risk: 9,
+      id: "tallboy",
+      name: "Tallboy",
+      bacGain: 0.31,
+      risk: 8,
+      durationMs: 2600,
+      note: "+0.31 BAC / medium risk",
+    },
+    {
+      id: "craftipa",
+      name: "Craft IPA",
+      bacGain: 0.42,
+      risk: 13,
       durationMs: 3200,
-      note: "+31 meter / medium risk",
+      note: "+0.42 BAC / wobbly",
     },
     {
-      id: "chaos",
-      name: "Chaos Malt Bomb",
-      gain: 45,
-      risk: 24,
-      durationMs: 4300,
-      note: "+45 meter / high risk",
+      id: "mystery",
+      name: "Mystery Gas Station Beer",
+      bacGain: 0.68,
+      risk: 30,
+      durationMs: 2000,
+      note: "+0.68 BAC / chaos mode",
     },
   ];
 
@@ -176,10 +212,14 @@
     score: 0,
     highScore: 0,
     drunkMeter: 58,
-    overloadReserve: 0,
+    bac: 0.66,
+    hydration: 0.5,
+    tolerance: 0,
     pukeRisk: 0,
-    atMaxMeterMs: 0,
+    highDrunkMs: 0,
+    bacOverloadMs: 0,
     pukeCooldownMs: 0,
+    flow: 0,
     streakMs: 0,
     streakTier: 0,
     selectedBeerIndex: 0,
@@ -192,6 +232,15 @@
     effects: {
       steadyHandsMs: 0,
       dabRushMs: 0,
+      mysteryRushMs: 0,
+      hangoverCrashMs: 0,
+    },
+    bodie: {
+      mode: "idle",
+      modeUntil: 0,
+      caption: "Precision requires carbonation.",
+      overlayMode: "none",
+      overlayUntil: 0,
     },
     logs: [],
     settings: {
@@ -232,6 +281,8 @@
     eventText: document.getElementById("eventText"),
     eventMeta: document.getElementById("eventMeta"),
     eventActionBtn: document.getElementById("eventActionBtn"),
+    bodieStage: document.getElementById("bodieStage"),
+    bodieCaption: document.getElementById("bodieCaption"),
   };
 
   let audioCtx = null;
@@ -294,39 +345,48 @@
 
   function getStreakBonus() {
     if (state.streakTier <= 0) return 1;
-    return clamp(1 + state.streakTier * TUNING.STREAK_STEP_MULT, 1, TUNING.STREAK_MAX_BONUS);
+    const flowStreakBoost = 1 + state.flow * TUNING.FLOW_STREAK_MAX_BONUS;
+    return (
+      clamp(1 + state.streakTier * TUNING.STREAK_STEP_MULT, 1, TUNING.STREAK_MAX_BONUS) * flowStreakBoost
+    );
   }
 
-  function addDrunk(amount) {
+  function syncDrunkFromBac() {
+    const ratio = clamp(state.bac / TUNING.DRUNK_CURVE_DENOMINATOR, 0, 1);
+    state.drunkMeter = Math.pow(ratio, TUNING.DRUNK_CURVE_POWER) * 100;
+  }
+
+  function addBac(amount) {
     if (!Number.isFinite(amount) || amount <= 0) {
       return;
     }
-    const combined = state.drunkMeter + amount;
-    if (combined <= 100) {
-      state.drunkMeter = combined;
-      return;
-    }
-    state.overloadReserve = clamp(state.overloadReserve + (combined - 100), 0, 200);
-    state.drunkMeter = 100;
+    state.bac = clamp(state.bac + amount, 0, 1.5);
+    state.tolerance = clamp(state.tolerance + amount * 0.045, 0, 1);
+    state.hydration = clamp(state.hydration - amount * 0.08, 0, 1);
+    syncDrunkFromBac();
   }
 
-  function removeDrunk(amount) {
+  function removeBac(amount) {
     if (!Number.isFinite(amount) || amount <= 0) {
       return;
     }
-    let remaining = amount;
-    if (state.overloadReserve > 0) {
-      const taken = Math.min(state.overloadReserve, remaining);
-      state.overloadReserve -= taken;
-      remaining -= taken;
+    state.bac = clamp(state.bac - amount, 0, 1.5);
+    state.hydration = clamp(state.hydration + amount * 0.2, 0, 1);
+    syncDrunkFromBac();
+  }
+
+  function setBodieMode(mode, durationMs, captionPool) {
+    const now = state.timeMs;
+    state.bodie.mode = mode;
+    state.bodie.modeUntil = now + Math.max(0, durationMs || 0);
+    if (Array.isArray(captionPool) && captionPool.length) {
+      state.bodie.caption = pick(captionPool);
     }
-    if (remaining > 0) {
-      state.drunkMeter = clamp(state.drunkMeter - remaining, 0, 100);
-    }
-    if (state.overloadReserve <= 0) {
-      state.overloadReserve = 0;
-      state.drunkMeter = clamp(state.drunkMeter, 0, 100);
-    }
+  }
+
+  function setBodieOverlay(mode, durationMs) {
+    state.bodie.overlayMode = mode;
+    state.bodie.overlayUntil = state.timeMs + Math.max(0, durationMs || 0);
   }
 
   function ensureAudioContext() {
@@ -464,10 +524,14 @@
     state.timeMs = 0;
     state.score = 0;
     state.drunkMeter = 58;
-    state.overloadReserve = 0;
+    state.bac = 0.66;
+    state.hydration = 0.5;
+    state.tolerance = 0;
     state.pukeRisk = 0;
-    state.atMaxMeterMs = 0;
+    state.highDrunkMs = 0;
+    state.bacOverloadMs = 0;
     state.pukeCooldownMs = 0;
+    state.flow = 0;
     state.streakMs = 0;
     state.streakTier = 0;
     state.selectedBeerIndex = 0;
@@ -479,8 +543,16 @@
     state.event = null;
     state.effects.steadyHandsMs = 0;
     state.effects.dabRushMs = 0;
+    state.effects.mysteryRushMs = 0;
+    state.effects.hangoverCrashMs = 0;
     state.logs.length = 0;
     state.rngSeed = (Date.now() & 0xffffffff) ^ 0x7f4a7c15;
+    syncDrunkFromBac();
+    state.bodie.mode = "idle";
+    state.bodie.modeUntil = 0;
+    state.bodie.overlayMode = "none";
+    state.bodie.overlayUntil = 0;
+    state.bodie.caption = "Precision requires carbonation.";
 
     spawnCar();
     spawnCar();
@@ -525,13 +597,16 @@
       return;
     }
     const remaining = Math.max(600, Math.floor(car.remainingRepairMs));
-    startAction({
+    const started = startAction({
       type: "repair",
       label: `Fixing ${car.name}`,
       totalMs: remaining,
       meta: { carId: car.id },
       logText: `Bodie dives into ${car.name}. Wrench noises intensify.`,
     });
+    if (started) {
+      setBodieMode("repairing", remaining, ["This bolt fears me.", "Wrench therapy in session.", "Torque is just jazz."]);
+    }
   }
 
   function cancelRepair() {
@@ -555,25 +630,37 @@
 
   function startDrink() {
     const beer = DRINKS[state.selectedBeerIndex];
-    startAction({
+    const started = startAction({
       type: "drink",
       label: `Drinking ${beer.name}`,
       totalMs: beer.durationMs,
       meta: { beerId: beer.id },
       logText: `Bodie cracks a ${beer.name}.`,
     });
+    if (started) {
+      setBodieMode("drinking", beer.durationMs, ["Precision requires carbonation.", "Hydraulics run on vibes.", "One sip per horsepower."]);
+    }
   }
 
   function startBonus(actionKey) {
     const action = BONUS_ACTIONS[actionKey];
     if (!action) return;
-    startAction({
+    const started = startAction({
       type: "bonus",
       label: action.label,
       totalMs: action.durationMs,
       meta: { actionKey },
       logText: `Bodie starts: ${action.label.toLowerCase()}.`,
     });
+    if (!started) return;
+    if (actionKey === "cigarette") {
+      setBodieMode("cigarette", action.durationMs + 2400, ["Shop smoke break diplomacy.", "Stress exits through the ember."]);
+    } else if (actionKey === "dab") {
+      setBodieMode("dab", action.durationMs + 3200, ["That dab hit the timeline.", "I can hear colors in this engine."]);
+      setBodieOverlay("timewarp", 1500);
+    } else {
+      setBodieMode("repairing", action.durationMs, ["Questionable mechanics activated.", "If it works, it was intentional."]);
+    }
   }
 
   function finishRepair(meta) {
@@ -597,14 +684,19 @@
 
   function finishDrink(meta) {
     const beer = DRINKS.find((entry) => entry.id === meta.beerId) || DRINKS[0];
-    addDrunk(beer.gain);
-    state.pukeRisk = clamp(state.pukeRisk + beer.risk, 0, TUNING.PUKERISK_MAX);
-    addLog(`${beer.name} hits. +${beer.gain}% DrunkMeter, +${beer.risk}% PukeRisk.`);
+    addBac(beer.bacGain);
+    state.pukeRisk = clamp(state.pukeRisk + beer.risk * (1 - state.tolerance * 0.22), 0, TUNING.PUKERISK_MAX);
+    if (beer.id === "mystery") {
+      state.effects.mysteryRushMs = Math.max(state.effects.mysteryRushMs, TUNING.MYSTERY_GOD_MODE_MS);
+      addLog(`${beer.name} detonates your senses. God mode... probably.`);
+    } else {
+      addLog(`${beer.name} hits. +${beer.bacGain.toFixed(2)} BAC, +${beer.risk}% PukeRisk.`);
+    }
     playTone("complete");
   }
 
   function finishCigarette() {
-    addDrunk(7);
+    addBac(0.05);
     state.pukeRisk = clamp(state.pukeRisk - 12, 0, TUNING.PUKERISK_MAX);
     state.score += 45;
     state.effects.steadyHandsMs = Math.max(state.effects.steadyHandsMs, TUNING.CIG_EFFECT_MS);
@@ -620,7 +712,7 @@
   }
 
   function finishDab() {
-    addDrunk(13);
+    addBac(0.09);
     state.pukeRisk = clamp(state.pukeRisk + 20, 0, TUNING.PUKERISK_MAX);
     state.score += 90;
     state.effects.dabRushMs = Math.max(state.effects.dabRushMs, TUNING.DAB_EFFECT_MS);
@@ -649,7 +741,7 @@
         weight: 3,
         apply: () => {
           state.score += 90;
-          addDrunk(8);
+          addBac(0.06);
           for (const car of state.carQueue) {
             car.patienceMs += 2200;
             car.maxPatienceMs += 2200;
@@ -661,7 +753,7 @@
         weight: 2,
         apply: () => {
           state.score += 130;
-          addDrunk(17);
+          addBac(0.12);
           state.pukeRisk = clamp(state.pukeRisk + 16, 0, TUNING.PUKERISK_MAX);
           addLog("Gymnastic carburetor ritual succeeds, but reality blurs.");
         },
@@ -670,7 +762,7 @@
         weight: 2,
         apply: () => {
           state.score = Math.max(0, state.score - 130);
-          removeDrunk(10);
+          removeBac(0.1);
           state.timeMs += 2600;
           addLog("Bodie slips on a mystery puddle. Pride and points are gone.");
         },
@@ -745,6 +837,8 @@
       required: TUNING.PUKE_MASHES_REQUIRED,
     };
     state.pukeCooldownMs = TUNING.PUKERISK_COOLDOWN_MS;
+    setBodieMode("puke", 1800, ["Nope nope nope.", "Containment breach in progress."]);
+    setBodieOverlay("puke", 1400);
     addLog("Puke warning! Mash to hold it together.");
     playTone("warn");
   }
@@ -753,14 +847,14 @@
     if (success) {
       state.score = Math.max(0, state.score - 40);
       state.timeMs += TUNING.PUKE_SUCCESS_TIME_PENALTY_MS;
-      removeDrunk(13);
+      removeBac(0.16);
       state.pukeRisk = clamp(state.pukeRisk - 55, 0, TUNING.PUKERISK_MAX);
       addLog("Crisis managed. Minor dignity loss.");
       playTone("complete");
     } else {
       state.score = Math.max(0, state.score - 180);
       state.timeMs += TUNING.PUKE_FAIL_TIME_PENALTY_MS;
-      removeDrunk(30);
+      removeBac(0.42);
       state.pukeRisk = clamp(state.pukeRisk - 80, 0, TUNING.PUKERISK_MAX);
       if (state.currentAction && state.currentAction.type === "repair") {
         const car = state.carQueue.find((entry) => entry.id === state.currentAction.meta.carId);
@@ -773,6 +867,8 @@
         }
       }
       addLog("Catastrophic puke. Massive delay.");
+      setBodieMode("puke", 2400, ["The floor did not deserve this."]);
+      setBodieOverlay("puke", 1800);
       playTone("puke");
     }
     updateHighScoreIfNeeded();
@@ -798,6 +894,7 @@
       reason,
     };
     state.currentAction = null;
+    setBodieMode("ko", TUNING.KO_WAKE_DELAY_MS + 800, ["Tell my sockets I love them."]);
     addLog("Bodie hits the floor. Lights out.");
     playTone("ko");
   }
@@ -805,11 +902,15 @@
   function resolveKO() {
     state.event = null;
     state.timeMs += TUNING.KO_TIME_PENALTY_MS;
-    state.drunkMeter = TUNING.KO_WAKE_METER;
-    state.overloadReserve = 0;
+    state.bac = TUNING.KO_WAKE_BAC;
+    syncDrunkFromBac();
     state.pukeRisk = TUNING.KO_WAKE_RISK;
-    state.atMaxMeterMs = 0;
+    state.highDrunkMs = 0;
+    state.bacOverloadMs = 0;
+    state.effects.hangoverCrashMs = TUNING.HANGOVER_CRASH_MS;
     state.pukeCooldownMs = Math.max(state.pukeCooldownMs, 4500);
+    state.flow = Math.max(0, state.flow - 0.4);
+    addLog("Hangover crash: Bodie's eyes don't work for 10 seconds.");
     addLog("Bodie wakes up behind a stack of tires. Shift continues.");
   }
 
@@ -829,6 +930,17 @@
   function updateEffects(stepMs) {
     state.effects.steadyHandsMs = Math.max(0, state.effects.steadyHandsMs - stepMs);
     state.effects.dabRushMs = Math.max(0, state.effects.dabRushMs - stepMs);
+    state.effects.mysteryRushMs = Math.max(0, state.effects.mysteryRushMs - stepMs);
+    state.effects.hangoverCrashMs = Math.max(0, state.effects.hangoverCrashMs - stepMs);
+
+    if (state.bodie.mode !== "ko" && state.bodie.modeUntil > 0 && state.timeMs >= state.bodie.modeUntil) {
+      state.bodie.mode = "idle";
+      state.bodie.modeUntil = 0;
+    }
+    if (state.bodie.overlayUntil > 0 && state.timeMs >= state.bodie.overlayUntil) {
+      state.bodie.overlayMode = "none";
+      state.bodie.overlayUntil = 0;
+    }
   }
 
   function updateStreak(stepMs) {
@@ -891,6 +1003,15 @@
     if (state.currentAction.type === "repair" && state.effects.dabRushMs > 0) {
       speed *= TUNING.DAB_REPAIR_SPEED_MULTIPLIER;
     }
+    if (state.currentAction.type === "repair" && state.effects.mysteryRushMs > 0) {
+      speed *= TUNING.MYSTERY_REPAIR_SPEED_MULTIPLIER;
+    }
+    if (state.currentAction.type === "repair") {
+      speed *= 1 + state.flow * TUNING.FLOW_REPAIR_SPEED_MAX_BONUS;
+    }
+    if (state.currentAction.type === "repair" && state.effects.hangoverCrashMs > 0) {
+      speed *= TUNING.HANGOVER_REPAIR_SPEED_MULTIPLIER;
+    }
     const delta = stepMs * speed;
     state.currentAction.remainingMs = Math.max(0, state.currentAction.remainingMs - delta);
 
@@ -941,42 +1062,61 @@
     const dt = stepMs / 1000;
     updateEffects(stepMs);
 
-    let drainPerSec = TUNING.BASELINE_DRAIN_PER_SEC;
-    if (state.effects.steadyHandsMs > 0) {
-      drainPerSec *= TUNING.CIG_DRAIN_MULTIPLIER;
+    let bacDecayPerSec = TUNING.BAC_BASE_DECAY_PER_SEC;
+    if (state.currentAction && state.currentAction.type === "repair") {
+      bacDecayPerSec += TUNING.BAC_REPAIR_DECAY_BONUS_PER_SEC;
     }
-    const drainAmount = drainPerSec * dt;
-    if (state.overloadReserve > 0) {
-      const reserveDrain = drainAmount * TUNING.OVERLOAD_DRAIN_MULTIPLIER;
-      state.overloadReserve = Math.max(0, state.overloadReserve - reserveDrain);
-      if (state.overloadReserve > 0) {
-        state.drunkMeter = 100;
-      } else {
-        const spill = Math.max(0, drainAmount - reserveDrain);
-        state.drunkMeter = clamp(100 - spill, 0, 100);
+    bacDecayPerSec += state.hydration * TUNING.BAC_HYDRATION_DECAY_BONUS_PER_SEC;
+    if (state.effects.steadyHandsMs > 0) {
+      bacDecayPerSec *= TUNING.BAC_CIG_DECAY_MULTIPLIER;
+    }
+    if (state.effects.dabRushMs > 0) {
+      bacDecayPerSec *= TUNING.BAC_DAB_DECAY_MULTIPLIER;
+    }
+    if (
+      state.drunkMeter >= TUNING.SWEET_SPOT_MIN &&
+      state.drunkMeter <= TUNING.SWEET_SPOT_MAX &&
+      state.currentAction?.type !== "drink"
+    ) {
+      state.flow = clamp(state.flow + TUNING.FLOW_BUILD_PER_SEC * dt, 0, 1);
+      bacDecayPerSec *= 1 - state.flow * TUNING.FLOW_DECAY_REDUCTION_MAX;
+    } else {
+      state.flow = clamp(state.flow - TUNING.FLOW_DECAY_PER_SEC * dt, 0, 1);
+    }
+
+    state.bac = clamp(state.bac - bacDecayPerSec * dt, 0, 1.5);
+    state.hydration = clamp(state.hydration + 0.016 * dt, 0, 1);
+    state.tolerance = clamp(state.tolerance + 0.009 * dt, 0, 1);
+    syncDrunkFromBac();
+
+    if (state.drunkMeter > TUNING.PUKE_HIGH_METER_THRESHOLD) {
+      state.highDrunkMs += stepMs;
+      if (state.highDrunkMs >= TUNING.PUKE_HIGH_METER_GRACE_MS) {
+        state.pukeRisk = clamp(
+          state.pukeRisk + TUNING.PUKE_HIGH_METER_GAIN_PER_SEC * dt * (1 - state.tolerance * 0.2),
+          0,
+          TUNING.PUKERISK_MAX
+        );
       }
     } else {
-      state.drunkMeter = clamp(state.drunkMeter - drainAmount, 0, 100);
+      state.highDrunkMs = Math.max(0, state.highDrunkMs - stepMs * 1.2);
     }
 
-    if (state.drunkMeter > 90) {
+    if (state.bac > TUNING.PUKE_OVERLOAD_BAC_THRESHOLD) {
       state.pukeRisk = clamp(
-        state.pukeRisk + TUNING.PUKERISK_GAIN_PER_SEC * dt,
-        0,
-        TUNING.PUKERISK_MAX
-      );
-    } else {
-      state.pukeRisk = clamp(
-        state.pukeRisk - TUNING.PUKERISK_DECAY_PER_SEC * dt,
+        state.pukeRisk + TUNING.PUKE_OVERLOAD_GAIN_PER_SEC * dt * (1 - state.hydration * 0.25),
         0,
         TUNING.PUKERISK_MAX
       );
     }
+    if (state.drunkMeter < TUNING.PUKE_UNDER_CONTROL_THRESHOLD) {
+      state.pukeRisk = clamp(state.pukeRisk - TUNING.PUKE_UNDER_CONTROL_DECAY_PER_SEC * dt, 0, TUNING.PUKERISK_MAX);
+    }
 
-    if (state.drunkMeter >= 99.5) {
-      state.atMaxMeterMs += stepMs;
+    if (state.bac > TUNING.KO_BAC_THRESHOLD) {
+      state.bacOverloadMs += stepMs;
     } else {
-      state.atMaxMeterMs = Math.max(0, state.atMaxMeterMs - stepMs * 1.5);
+      state.bacOverloadMs = Math.max(0, state.bacOverloadMs - stepMs * 2);
     }
     state.pukeCooldownMs = Math.max(0, state.pukeCooldownMs - stepMs);
 
@@ -984,8 +1124,12 @@
     updateAction(stepMs);
     updateQueue(stepMs);
 
-    if (state.atMaxMeterMs >= TUNING.KO_OVERLOAD_MS) {
-      triggerKO("overloaded");
+    if (state.bacOverloadMs >= TUNING.KO_BAC_OVERLOAD_WINDOW_MS) {
+      triggerKO("bac-overload");
+      return;
+    }
+    if (state.bac >= TUNING.KO_RANDOM_BAC_THRESHOLD && rand() < TUNING.KO_RANDOM_CHANCE_PER_SEC * dt) {
+      triggerKO("critical-random");
       return;
     }
     if (state.pukeRisk >= TUNING.PUKERISK_THRESHOLD && state.pukeCooldownMs <= 0) {
@@ -1043,6 +1187,7 @@
       "1",
       "2",
       "3",
+      "4",
       "f",
       "d",
       "c",
@@ -1070,6 +1215,7 @@
     if (key === "1") selectBeer(0, true);
     else if (key === "2") selectBeer(1, true);
     else if (key === "3") selectBeer(2, true);
+    else if (key === "4") selectBeer(3, true);
     else if (key === "f" || key === "enter") startRepair();
     else if (key === "d" || key === " ") startDrink();
     else if (key === "c" || key === "a") startBonus("cigarette");
@@ -1248,7 +1394,14 @@
     if (state.effects.dabRushMs > 0) {
       effects.push(`dab rush ${formatSeconds(state.effects.dabRushMs)}`);
     }
-    ui.effectStatus.textContent = effects.length ? `Effects: ${effects.join(" | ")}` : "Effects: none";
+    if (state.effects.mysteryRushMs > 0) {
+      effects.push(`mystery god mode ${formatSeconds(state.effects.mysteryRushMs)}`);
+    }
+    if (state.effects.hangoverCrashMs > 0) {
+      effects.push(`hangover crash ${formatSeconds(state.effects.hangoverCrashMs)}`);
+    }
+    effects.push(`flow ${(state.flow * 100).toFixed(0)}%`);
+    ui.effectStatus.textContent = `Effects: ${effects.join(" | ")}`;
   }
 
   function renderOverlay() {
@@ -1318,7 +1471,7 @@
       ui.streakValue.textContent = "Keep DrunkMeter 70-85%";
     }
 
-    ui.drunkMeterLabel.textContent = `${state.drunkMeter.toFixed(0)}%`;
+    ui.drunkMeterLabel.textContent = `${state.drunkMeter.toFixed(0)}% (BAC ${state.bac.toFixed(2)})`;
     ui.drunkMeterFill.style.width = `${state.drunkMeter.toFixed(1)}%`;
     const pukePct = clamp((state.pukeRisk / TUNING.PUKERISK_THRESHOLD) * 100, 0, 100);
     ui.pukeRiskLabel.textContent = `${state.pukeRisk.toFixed(0)}%`;
@@ -1328,6 +1481,14 @@
     ui.selectedCarText.textContent = selected
       ? `Selected car: ${selected.name} (${selected.difficultyTier})`
       : "Selected car: none";
+  }
+
+  function renderBodie() {
+    if (!ui.bodieStage || !ui.bodieCaption) {
+      return;
+    }
+    ui.bodieStage.className = `bodie-stage mode-${state.bodie.mode} overlay-${state.bodie.overlayMode}`;
+    ui.bodieCaption.textContent = state.bodie.caption;
   }
 
   function renderDangerVisuals() {
@@ -1340,6 +1501,7 @@
     ui.gameShell.style.setProperty("--wobble-intensity", wobble.toFixed(3));
     ui.gameShell.style.setProperty("--danger-vignette", danger.toFixed(3));
     ui.gameShell.classList.toggle("is-wobbly", wobble > 0.02);
+    ui.gameShell.classList.toggle("is-timewarp", state.bodie.overlayMode === "timewarp");
   }
 
   function render() {
@@ -1351,6 +1513,7 @@
     renderButtons();
     renderLogs();
     renderOverlay();
+    renderBodie();
     renderDangerVisuals();
   }
 
@@ -1385,7 +1548,10 @@
       score: state.score,
       high_score: state.highScore,
       drunk_meter: Number(state.drunkMeter.toFixed(2)),
-      overload_reserve: Number(state.overloadReserve.toFixed(2)),
+      bac: Number(state.bac.toFixed(3)),
+      hydration: Number(state.hydration.toFixed(3)),
+      tolerance: Number(state.tolerance.toFixed(3)),
+      flow: Number(state.flow.toFixed(3)),
       puke_risk: Number(state.pukeRisk.toFixed(2)),
       multiplier: getDrunkMultiplier(state.drunkMeter),
       streak_tier: state.streakTier,

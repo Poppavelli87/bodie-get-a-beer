@@ -77,9 +77,33 @@
         </div>
 
         <div class="action-group">
-          <h3>Beer Select (1,2,3)</h3>
+          <h3>Beer Select (1,2,3,4)</h3>
           <div id="beerList" class="beer-list" role="radiogroup" aria-label="Beer types"></div>
           <button id="drinkBtn" type="button">Drink Selected (D)</button>
+        </div>
+
+        <div class="action-group bodie-group">
+          <h3>Bodie Stage</h3>
+          <div id="bodieStage" class="bodie-stage mode-idle overlay-none" aria-hidden="true">
+            <div class="stage-sparks"><span></span><span></span><span></span></div>
+            <div class="stage-cloud"></div>
+            <div class="stage-splat"></div>
+            <div class="bodie-zzzs">Zzz</div>
+            <div class="bodie-prop beer">🍺</div>
+            <div class="bodie-prop cig"><span class="ember"></span></div>
+            <div class="bodie-prop dab">🖊️</div>
+            <div class="bodie-prop wrench">🔧</div>
+            <div class="bodie-character">
+              <div class="bodie-head">
+                <div class="eyes"><span></span><span></span></div>
+                <div class="mouth"></div>
+              </div>
+              <div class="bodie-arm arm-left"></div>
+              <div class="bodie-arm arm-right"></div>
+              <div class="bodie-body"></div>
+            </div>
+          </div>
+          <p id="bodieCaption" class="bodie-caption">Precision requires carbonation.</p>
         </div>
 
         <div class="action-group">
@@ -108,7 +132,7 @@
 
         <div class="action-group control-help">
           <h3>Keyboard</h3>
-          <p><kbd>1/2/3</kbd> beer <kbd>F</kbd> fix <kbd>D</kbd> drink <kbd>C</kbd> cigarette <kbd>B</kbd> dab <kbd>T</kbd> thing <kbd>P</kbd> pause <kbd>R</kbd> reset</p>
+          <p><kbd>1/2/3/4</kbd> beer <kbd>F</kbd> fix <kbd>D</kbd> drink <kbd>C</kbd> cigarette <kbd>B</kbd> dab <kbd>T</kbd> thing <kbd>P</kbd> pause <kbd>R</kbd> reset</p>
         </div>
       </section>
 

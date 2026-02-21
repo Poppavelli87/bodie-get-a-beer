@@ -2,6 +2,13 @@
 
 Bodie Get A Beer is a fast arcade time-management game about balancing wrench work and bad decisions. Fix cars for points, drink to boost your multiplier, and avoid puking or getting KO'd before the shift ends.
 
+## New in v1.1
+
+- Reworked intoxication into a layered model: `BAC` is now the source of truth and `DrunkMeter` is a curved UI projection. Beer effects linger longer and decay more smoothly.
+- Added hydration/tolerance interactions, sustained-high intoxication puke logic, BAC overload KO checks, and a post-KO hangover crash window.
+- Added a flow pacing perk for keeping DrunkMeter in the 70-85 zone: it builds momentum for better repair speed and streak value.
+- Added an animated **Bodie Stage** panel with state-driven action animations (idle, repair, drink, cigarette, dab, puke, KO) plus rotating comedic captions.
+
 ## How To Run
 
 1. Open `index.html` in any modern browser.
@@ -46,7 +53,7 @@ Bodie Get A Beer is a fast arcade time-management game about balancing wrench wo
 
 ## Controls
 
-- `1 / 2 / 3` select beer
+- `1 / 2 / 3 / 4` select beer
 - `F` fix selected car
 - `D` drink selected beer
 - `C` bum cigarette
