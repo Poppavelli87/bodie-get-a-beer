@@ -108,23 +108,36 @@
 
         <div class="action-group bodie-group">
           <h3>Bodie Stage</h3>
+          <p class="bodie-oil-meter" id="bodieOilMeter" aria-live="polite">🛢️ Clean-ish human</p>
           <div id="bodieStage" class="bodie-stage mode-idle overlay-none" aria-hidden="true">
             <div class="stage-sparks"><span></span><span></span><span></span></div>
             <div class="stage-cloud"></div>
             <div class="stage-splat"></div>
+            <div class="stage-fluid-stream"></div>
+            <div class="stage-ding">DING!</div>
+            <div class="stage-zap"></div>
             <div class="bodie-zzzs">Zzz</div>
             <div class="bodie-prop beer">🍺</div>
             <div class="bodie-prop cig"><span class="ember"></span></div>
             <div class="bodie-prop dab">🖊️</div>
             <div class="bodie-prop wrench">🔧</div>
+            <div class="bodie-prop hammer">🔨</div>
+            <div class="bodie-prop wire">〰️</div>
             <div class="bodie-character">
               <div class="bodie-head">
-                <div class="eyes"><span></span><span></span></div>
-                <div class="mouth"></div>
+                <div class="bodie-hair"><span class="stray stray-a"></span><span class="stray stray-b"></span></div>
+                <div class="bodie-face">
+                  <div class="eyes"><span></span><span></span></div>
+                  <div class="mouth"></div>
+                  <div class="beer-foam"></div>
+                </div>
               </div>
-              <div class="bodie-arm arm-left"></div>
-              <div class="bodie-arm arm-right"></div>
-              <div class="bodie-body"></div>
+              <div class="bodie-body">
+                <div class="bodie-shirt"></div>
+              </div>
+              <div class="bodie-arm bodie-arm-left"></div>
+              <div class="bodie-arm bodie-arm-right"></div>
+              <div class="bodie-oil-overlay"></div>
             </div>
           </div>
           <p id="bodieCaption" class="bodie-caption">Precision requires carbonation.</p>

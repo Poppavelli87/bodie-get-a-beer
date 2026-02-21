@@ -529,11 +529,22 @@ button:focus-visible,
   }
 }
 
+
 .bodie-group {
   background: #fff7e8;
 }
 
+.bodie-oil-meter {
+  margin: 0.2rem 0 0.45rem;
+  font-size: 0.88rem;
+  color: #463318;
+  font-weight: 700;
+}
+
 .bodie-stage {
+  --dishevel-level: 0;
+  --dirt-level: 0;
+  --repair-intensity: 0;
   position: relative;
   overflow: hidden;
   border: 2px solid #33200c;
@@ -554,12 +565,41 @@ button:focus-visible,
 .bodie-head {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
-  border: 2px solid #2a1a07;
-  background: #ffd8b3;
   margin: 0 auto;
   position: relative;
 }
+
+.bodie-face {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #2a1a07;
+  background: #ffd8b3;
+  position: relative;
+}
+
+.bodie-hair {
+  position: absolute;
+  left: 7px;
+  top: -8px;
+  width: 40px;
+  height: 16px;
+  border-radius: 18px 18px 6px 6px;
+  background: #2b1f16;
+  transform-origin: 50% 100%;
+}
+
+.bodie-hair .stray {
+  position: absolute;
+  width: 3px;
+  height: 10px;
+  border-radius: 3px;
+  background: #2b1f16;
+  opacity: 0;
+}
+
+.bodie-hair .stray-a { right: 1px; top: -7px; transform: rotate(20deg); }
+.bodie-hair .stray-b { left: 5px; top: -8px; transform: rotate(-22deg); }
 
 .eyes {
   display: flex;
@@ -582,6 +622,18 @@ button:focus-visible,
   margin: 7px auto 0;
 }
 
+.beer-foam {
+  position: absolute;
+  width: 19px;
+  height: 11px;
+  left: 16px;
+  top: 37px;
+  border-radius: 12px;
+  background: rgba(255, 253, 244, 0.95);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.55);
+  opacity: 0;
+}
+
 .bodie-body {
   width: 72px;
   height: 72px;
@@ -589,6 +641,26 @@ button:focus-visible,
   border: 2px solid #2a1a07;
   border-radius: 12px;
   background: #2e78d1;
+  position: relative;
+}
+
+.bodie-shirt {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #3f8de8, #2e78d1);
+}
+
+.bodie-shirt::after {
+  content: "";
+  position: absolute;
+  left: 17px;
+  right: 17px;
+  bottom: -2px;
+  height: 9px;
+  border-radius: 0 0 8px 8px;
+  background: #2d6ac8;
+  transform: translateY(calc(var(--dishevel-level) * 1.4px));
 }
 
 .bodie-arm {
@@ -602,8 +674,53 @@ button:focus-visible,
   transform-origin: top center;
 }
 
-.arm-left { left: 12px; transform: rotate(16deg); }
-.arm-right { right: 12px; transform: rotate(-12deg); }
+.bodie-arm-left { left: 12px; transform: rotate(16deg); }
+.bodie-arm-right { right: 12px; transform: rotate(-12deg); }
+
+.bodie-oil-overlay,
+.bodie-oil-overlay::before,
+.bodie-oil-overlay::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bodie-oil-overlay {
+  opacity: 0;
+  background:
+    radial-gradient(circle at 43% 21%, rgba(31, 25, 21, 0.58) 0 10px, transparent 11px),
+    radial-gradient(circle at 68% 60%, rgba(33, 29, 24, 0.42) 0 9px, transparent 10px),
+    radial-gradient(circle at 36% 66%, rgba(26, 22, 19, 0.34) 0 12px, transparent 13px);
+}
+
+.bodie-oil-overlay::before {
+  content: "";
+  opacity: 0;
+  background:
+    radial-gradient(circle at 25% 23%, rgba(22, 17, 15, 0.45) 0 3px, transparent 4px),
+    radial-gradient(circle at 78% 28%, rgba(22, 17, 15, 0.46) 0 4px, transparent 5px),
+    radial-gradient(circle at 54% 74%, rgba(22, 17, 15, 0.4) 0 2px, transparent 3px),
+    radial-gradient(circle at 12% 67%, rgba(22, 17, 15, 0.36) 0 2px, transparent 3px),
+    radial-gradient(circle at 83% 80%, rgba(22, 17, 15, 0.4) 0 3px, transparent 4px);
+}
+
+.bodie-oil-overlay::after {
+  content: "";
+  opacity: 0;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0), rgba(202, 223, 255, 0.25), rgba(255, 255, 255, 0));
+  mix-blend-mode: screen;
+}
+
+.bodie-stage.dirt-1 .bodie-oil-overlay { opacity: 0.2; }
+.bodie-stage.dirt-2 .bodie-oil-overlay { opacity: 0.34; }
+.bodie-stage.dirt-3 .bodie-oil-overlay,
+.bodie-stage.dirt-3 .bodie-oil-overlay::before { opacity: 0.5; }
+.bodie-stage.dirt-4 .bodie-oil-overlay,
+.bodie-stage.dirt-4 .bodie-oil-overlay::before { opacity: 0.68; }
+.bodie-stage.dirt-4 .bodie-oil-overlay::after { opacity: 0.22; }
+.bodie-stage.dirt-5 .bodie-oil-overlay,
+.bodie-stage.dirt-5 .bodie-oil-overlay::before { opacity: 0.86; }
+.bodie-stage.dirt-5 .bodie-oil-overlay::after { opacity: 0.35; }
 
 .bodie-prop {
   position: absolute;
@@ -615,6 +732,8 @@ button:focus-visible,
 .bodie-prop.beer { left: 60%; top: 90px; font-size: 1.7rem; }
 .bodie-prop.dab { left: 62%; top: 85px; font-size: 1.3rem; }
 .bodie-prop.wrench { left: 64%; top: 94px; font-size: 1.4rem; }
+.bodie-prop.hammer { left: 64%; top: 95px; font-size: 1.4rem; }
+.bodie-prop.wire { left: 63%; top: 97px; font-size: 1.1rem; letter-spacing: -0.08rem; }
 .bodie-prop.cig {
   left: 62%;
   top: 104px;
@@ -638,6 +757,9 @@ button:focus-visible,
 .stage-sparks span,
 .stage-cloud,
 .stage-splat,
+.stage-fluid-stream,
+.stage-ding,
+.stage-zap,
 .bodie-zzzs {
   position: absolute;
   opacity: 0;
@@ -664,6 +786,34 @@ button:focus-visible,
   top: 72px;
 }
 
+.stage-fluid-stream {
+  width: 8px;
+  height: 42px;
+  left: 68%;
+  top: 103px;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, rgba(245, 203, 68, 0.88), rgba(192, 94, 38, 0.7));
+  transform-origin: top center;
+}
+
+.stage-ding {
+  right: 17px;
+  top: 67px;
+  color: #ffe07f;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.stage-zap {
+  width: 24px;
+  height: 24px;
+  left: 66%;
+  top: 100px;
+  background: linear-gradient(135deg, rgba(115, 231, 255, 0.95), rgba(99, 133, 255, 0.2));
+  clip-path: polygon(40% 0, 72% 0, 52% 42%, 72% 42%, 30% 100%, 44% 58%, 25% 58%);
+}
+
 .stage-splat {
   inset: 0;
   background: radial-gradient(circle at 52% 56%, rgba(115, 182, 70, 0.82), rgba(115, 182, 70, 0) 44%);
@@ -685,14 +835,45 @@ button:focus-visible,
 }
 
 .mode-idle .bodie-character { animation: bodie-idle 2.4s ease-in-out infinite; }
-.mode-repairing .arm-right { animation: wrench-swing 0.5s linear infinite; }
-.mode-repairing .bodie-prop.wrench,
+.mode-repairing_wrench .bodie-prop.wrench,
+.mode-repairing_pour .bodie-prop.wrench,
+.mode-repairing_hammer .bodie-prop.hammer,
+.mode-repairing_wiring .bodie-prop.wire,
 .mode-drinking .bodie-prop.beer,
 .mode-cigarette .bodie-prop.cig,
 .mode-dab .bodie-prop.dab { opacity: 1; transform: scale(1); }
-.mode-repairing .stage-sparks span { opacity: 1; animation: sparks 0.45s linear infinite; }
+
+.mode-repairing_wrench .bodie-arm-right,
+.mode-repairing_pour .bodie-arm-right { animation: wrench-swing calc(0.55s - (var(--repair-intensity) * 0.12s)) linear infinite; }
+.mode-repairing_wrench .stage-sparks span {
+  opacity: calc(0.55 + (var(--repair-intensity) * 0.35));
+  animation: sparks calc(0.45s - (var(--repair-intensity) * 0.08s)) linear infinite;
+}
+.mode-repairing_pour .stage-fluid-stream {
+  opacity: 0.8;
+  animation: pour-fluid calc(0.95s - (var(--repair-intensity) * 0.2s)) ease-in-out infinite;
+}
+.mode-repairing_hammer .bodie-arm-right {
+  animation: hammer-bonk calc(0.62s - (var(--repair-intensity) * 0.16s)) cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+.mode-repairing_hammer .stage-ding {
+  opacity: 0.85;
+  animation: ding-pop calc(0.64s - (var(--repair-intensity) * 0.15s)) steps(2, end) infinite;
+}
+.mode-repairing_wiring .bodie-arm-left,
+.mode-repairing_wiring .bodie-arm-right {
+  animation: wire-fix calc(0.65s - (var(--repair-intensity) * 0.14s)) ease-in-out infinite;
+}
+.mode-repairing_wiring .stage-zap {
+  opacity: 0.85;
+  animation: zap-flicker calc(0.55s - (var(--repair-intensity) * 0.14s)) steps(2, end) infinite;
+}
 
 .mode-drinking .bodie-character { animation: drink-tilt 1s ease-in-out infinite; }
+.mode-drinking.foam-drip .beer-foam {
+  opacity: 0.95;
+  animation: foam-drip 0.8s ease-in-out infinite;
+}
 .mode-cigarette .eyes span { height: 4px; margin-top: 3px; }
 .mode-cigarette .stage-cloud { opacity: 0.7; animation: smoke 2.4s ease-out infinite; }
 .mode-dab .bodie-character { animation: dab-hit 2s ease-in-out infinite; }
@@ -702,15 +883,45 @@ button:focus-visible,
 .mode-ko .bodie-character { opacity: 0.5; transform: translateX(-50%) rotate(84deg); transition: transform 0.5s ease; }
 .mode-ko .bodie-zzzs { opacity: 1; animation: zzz 1.4s ease-in-out infinite; }
 
+.bodie-stage .bodie-character {
+  --body-tilt: calc(var(--dishevel-level) * 1.4deg + var(--wobble-intensity) * 3deg);
+  transform: translateX(-50%) rotate(var(--body-tilt));
+}
+.bodie-stage .bodie-hair {
+  transform: skewX(calc(var(--dishevel-level) * -2deg)) rotate(calc(var(--dishevel-level) * 1.4deg));
+}
+.bodie-stage .bodie-hair .stray { opacity: clamp(0, calc((var(--dishevel-level) - 1) * 0.4), 1); }
+.bodie-stage .eyes span { height: calc(9px - (var(--dishevel-level) * 0.8px)); margin-top: calc(var(--dishevel-level) * 0.55px); }
+.bodie-stage .mouth {
+  border-bottom-width: calc(2px + (var(--dishevel-level) * 0.35px));
+  transform: rotate(calc(var(--dishevel-level) * 2.2deg));
+}
+.bodie-stage[data-dishevel="3"] .bodie-face,
+.bodie-stage[data-dishevel="4"] .bodie-face,
+.bodie-stage[data-dishevel="5"] .bodie-face {
+  box-shadow: inset 0 -6px rgba(233, 85, 78, 0.14);
+}
+.bodie-stage[data-dishevel="4"] .bodie-character,
+.bodie-stage[data-dishevel="5"] .bodie-character {
+  animation: drunken-wobble calc(1s - (var(--dishevel-level) * 0.08s)) ease-in-out infinite;
+}
+
 @keyframes bodie-idle { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-4px)} }
-@keyframes wrench-swing { 0%,100%{transform:rotate(-12deg)} 50%{transform:rotate(-68deg)} }
+@keyframes wrench-swing { 0%,100%{transform:rotate(-12deg)} 50%{transform:rotate(-74deg)} }
 @keyframes sparks { 0%{transform:scale(0.4);opacity:0.3} 70%{transform:scale(1.2);opacity:1} 100%{transform:translate(6px,-12px);opacity:0} }
+@keyframes pour-fluid { 0%,100%{transform:scaleY(0.7)} 50%{transform:scaleY(1.2)} }
+@keyframes hammer-bonk { 0%,100%{transform:rotate(-8deg)} 35%{transform:rotate(-82deg)} 60%{transform:rotate(4deg)} }
+@keyframes ding-pop { 0%,70%{transform:scale(0.6);opacity:0} 72%,100%{transform:scale(1);opacity:1} }
+@keyframes wire-fix { 0%,100%{transform:rotate(9deg)} 50%{transform:rotate(-18deg)} }
+@keyframes zap-flicker { 0%,40%{opacity:0.2} 50%,100%{opacity:0.92} }
 @keyframes drink-tilt { 0%,100%{transform:translateX(-50%) rotate(0)} 45%,60%{transform:translateX(-50%) rotate(-15deg)} }
 @keyframes smoke { 0%{transform:scale(0.6) translateY(10px);opacity:0.1} 60%{opacity:0.8} 100%{transform:scale(1.2) translateY(-20px);opacity:0} }
 @keyframes dab-hit { 0%,100%{transform:translateX(-50%) scale(1)} 40%{transform:translateX(-50%) scale(1.07) rotate(-7deg)} }
 @keyframes puke-shake { 0%,100%{transform:translateX(-50%) translateX(0)} 25%{transform:translateX(calc(-50% - 4px))} 75%{transform:translateX(calc(-50% + 4px))} }
 @keyframes splat { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
 @keyframes zzz { 0%,100%{transform:translateY(0);opacity:0.45} 50%{transform:translateY(-7px);opacity:1} }
+@keyframes drunken-wobble { 0%,100%{transform:translateX(-50%) rotate(calc(var(--body-tilt) - 2deg))} 50%{transform:translateX(-50%) rotate(calc(var(--body-tilt) + 3deg))} }
+@keyframes foam-drip { 0%,100%{transform:translateY(0);opacity:0.8} 50%{transform:translateY(5px);opacity:1} }
 
 @media (max-width: 740px) {
   .bodie-stage {
@@ -722,7 +933,12 @@ button:focus-visible,
   }
 }
 
-
+body[data-mobile-effects="reduced"] .stage-sparks span,
+body[data-mobile-effects="reduced"] .stage-zap,
+body[data-mobile-effects="reduced"] .stage-fluid-stream {
+  animation-duration: 1.25s !important;
+  opacity: 0.65;
+}
 
 .mobile-now-doing,
 .action-dock,

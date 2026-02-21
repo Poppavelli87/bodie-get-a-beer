@@ -204,6 +204,32 @@
     "Carburetor Phantom",
   ];
 
+
+  const REPAIR_STYLE_BY_TIER = {
+    "Backyard Beater": ["repairing_pour", "repairing_hammer", "repairing_wrench"],
+    "Soccer Van": ["repairing_wrench", "repairing_pour", "repairing_wiring"],
+    "Turbo Coupe": ["repairing_wrench", "repairing_wiring", "repairing_hammer"],
+    "Cursed Diesel": ["repairing_pour", "repairing_wrench", "repairing_hammer"],
+    "Midnight Racecar": ["repairing_wiring", "repairing_wrench", "repairing_hammer"],
+  };
+
+  const DIRT_STAGE_LABELS = [
+    "Clean-ish human",
+    "Lightly smudged",
+    "Greasy technician",
+    "Oil-splattered",
+    "Full shop goblin",
+    "Sentient oil slick",
+  ];
+
+  const DIRT_STAGE_CAPTIONS = [
+    "Bodie gains +1% viscosity.",
+    "That’s not a shirt anymore. That’s a rag with dreams.",
+    "EPA has entered the chat.",
+    "OSHA is pretending this is performance art.",
+    "He no longer casts a shadow, just a slick.",
+  ];
+
   const state = {
     running: true,
     paused: false,
@@ -241,6 +267,10 @@
       caption: "Precision requires carbonation.",
       overlayMode: "none",
       overlayUntil: 0,
+      dirt: 0,
+      dishevelLevel: 0,
+      foamUntil: 0,
+      repairIntensity: 0,
     },
     logs: [],
     settings: {
@@ -286,6 +316,7 @@
     eventActionBtn: document.getElementById("eventActionBtn"),
     bodieStage: document.getElementById("bodieStage"),
     bodieCaption: document.getElementById("bodieCaption"),
+    bodieOilMeter: document.getElementById("bodieOilMeter"),
     compactModeToggle: document.getElementById("compactModeToggle"),
     portraitPauseToggle: document.getElementById("portraitPauseToggle"),
     actionPauseBtn: document.getElementById("actionPauseBtn"),
@@ -519,6 +550,72 @@
     syncDrunkFromBac();
   }
 
+
+  function getDisheveledLevel() {
+    if (state.bac < 0.35) return 0;
+    if (state.bac < 0.6) return 1;
+    if (state.bac < 0.85) return 2;
+    if (state.bac < 1.08) return 3;
+    if (state.bac < 1.3) return 4;
+    return 5;
+  }
+
+  function getDirtStage(dirt) {
+    if (dirt <= 10) return 0;
+    if (dirt <= 25) return 1;
+    if (dirt <= 45) return 2;
+    if (dirt <= 65) return 3;
+    if (dirt <= 85) return 4;
+    return 5;
+  }
+
+  function addDirt(amount, reason) {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const previousStage = getDirtStage(state.bodie.dirt);
+    state.bodie.dirt = clamp(state.bodie.dirt + amount, 0, 100);
+    const nextStage = getDirtStage(state.bodie.dirt);
+    if (nextStage > previousStage) {
+      const captionIndex = Math.min(DIRT_STAGE_CAPTIONS.length - 1, nextStage - 1);
+      addLog(DIRT_STAGE_CAPTIONS[captionIndex]);
+      if (reason) {
+        addLog(reason);
+      }
+    }
+  }
+
+  function getRepairStyleForCar(car) {
+    if (!car) return "repairing_wrench";
+    const tierStyles = REPAIR_STYLE_BY_TIER[car.difficultyTier] || ["repairing_wrench"];
+    const style = tierStyles[randInt(0, tierStyles.length - 1)];
+    if (car.name.includes("Oil") || car.name.includes("Radiator")) return "repairing_pour";
+    if (car.name.includes("Alternator") || car.name.includes("Starter")) return "repairing_wiring";
+    if (car.name.includes("Muffler") || car.name.includes("Axle")) return "repairing_wrench";
+    if (car.name.includes("Phantom") || car.name.includes("Goblin")) return "repairing_hammer";
+    return style;
+  }
+
+  function getRepairDirtGain(car) {
+    const nudge = car.repairStyle === "repairing_hammer" ? 2 : car.repairStyle === "repairing_pour" ? 1 : 0;
+    if (car.difficultyTier === "Backyard Beater") return clamp(randInt(4, 7) + nudge, 4, 7);
+    if (car.difficultyTier === "Soccer Van" || car.difficultyTier === "Turbo Coupe") return clamp(randInt(7, 12) + nudge, 7, 12);
+    return clamp(randInt(12, 20) + nudge, 12, 20);
+  }
+
+  function updateBodieAppearance() {
+    state.bodie.dishevelLevel = getDisheveledLevel();
+    const dirtStage = getDirtStage(state.bodie.dirt);
+    if (!ui.bodieStage) return;
+    ui.bodieStage.dataset.dirtStage = String(dirtStage);
+    ui.bodieStage.dataset.dishevel = String(state.bodie.dishevelLevel);
+    ui.bodieStage.style.setProperty("--dirt-level", String(dirtStage));
+    ui.bodieStage.style.setProperty("--dishevel-level", String(state.bodie.dishevelLevel));
+    ui.bodieStage.classList.remove("dirt-0", "dirt-1", "dirt-2", "dirt-3", "dirt-4", "dirt-5");
+    ui.bodieStage.classList.add(`dirt-${dirtStage}`);
+    if (ui.bodieOilMeter) {
+      ui.bodieOilMeter.textContent = `🛢️ ${DIRT_STAGE_LABELS[dirtStage]}`;
+    }
+  }
+
   function setBodieMode(mode, durationMs, captionPool) {
     const now = state.timeMs;
     state.bodie.mode = mode;
@@ -655,6 +752,7 @@
     };
     car.remainingRepairMs = car.repairTimeMs;
     car.maxPatienceMs = car.patienceMs;
+    car.repairStyle = getRepairStyleForCar(car);
     return car;
   }
 
@@ -714,6 +812,10 @@
     state.bodie.overlayMode = "none";
     state.bodie.overlayUntil = 0;
     state.bodie.caption = "Precision requires carbonation.";
+    state.bodie.dirt = 0;
+    state.bodie.dishevelLevel = 0;
+    state.bodie.foamUntil = 0;
+    state.bodie.repairIntensity = 0;
     lastQueueSignature = "";
     lastLogSignature = "";
 
@@ -760,15 +862,23 @@
       return;
     }
     const remaining = Math.max(600, Math.floor(car.remainingRepairMs));
+    car.repairStyle = car.repairStyle || getRepairStyleForCar(car);
+    const styleLabel = car.repairStyle.replace("repairing_", "");
     const started = startAction({
       type: "repair",
-      label: `Fixing ${car.name}`,
+      label: `Fixing ${car.name} (${styleLabel})`,
       totalMs: remaining,
-      meta: { carId: car.id },
-      logText: `Bodie dives into ${car.name}. Wrench noises intensify.`,
+      meta: { carId: car.id, repairStyle: car.repairStyle },
+      logText: `Bodie dives into ${car.name}. ${styleLabel} protocol engaged.`,
     });
     if (started) {
-      setBodieMode("repairing", remaining, ["This bolt fears me.", "Wrench therapy in session.", "Torque is just jazz."]);
+      const captionByStyle = {
+        repairing_wrench: ["This bolt fears me.", "Wrench therapy in session.", "Torque is just jazz."],
+        repairing_pour: ["Everything is better with mystery fluid.", "Pour now, ask torque specs later."],
+        repairing_hammer: ["Percussive maintenance is still maintenance.", "If it dings, it lives."],
+        repairing_wiring: ["Electricity is just spicy spaghetti.", "Wire colors are a suggestion."],
+      };
+      setBodieMode(car.repairStyle, remaining, captionByStyle[car.repairStyle] || captionByStyle.repairing_wrench);
     }
   }
 
@@ -789,6 +899,7 @@
       addLog(`Repair canceled. ${Math.round((kept / car.repairTimeMs) * 100)}% progress survived.`);
     }
     state.currentAction = null;
+    state.bodie.repairIntensity = 0;
   }
 
   function startDrink() {
@@ -822,7 +933,7 @@
       setBodieMode("dab", action.durationMs + 3200, ["That dab hit the timeline.", "I can hear colors in this engine."]);
       setBodieOverlay("timewarp", 1500);
     } else {
-      setBodieMode("repairing", action.durationMs, ["Questionable mechanics activated.", "If it works, it was intentional."]);
+      setBodieMode("repairing_hammer", action.durationMs, ["Questionable mechanics activated.", "If it works, it was intentional."]);
     }
   }
 
@@ -837,11 +948,20 @@
     state.score += points;
     updateHighScoreIfNeeded();
 
+    const dirtGain = getRepairDirtGain(car);
+    addDirt(dirtGain);
+
+    if (state.bodie.dirt >= 80 && state.drunkMeter >= 85) {
+      state.score += 33;
+      addLog("Grease wizard bonus: +33 style points.");
+    }
+
     state.carQueue = state.carQueue.filter((entry) => entry.id !== car.id);
     ensureSelectedCar();
     addLog(
       `Fixed ${car.name}: +${points} (${multiplier.toFixed(1)}x drunk x ${streakBonus.toFixed(2)} streak).`
     );
+    addLog(`Motor oil everywhere. Dirt +${dirtGain}.`);
     playTone("complete");
   }
 
@@ -849,6 +969,7 @@
     const beer = DRINKS.find((entry) => entry.id === meta.beerId) || DRINKS[0];
     addBac(beer.bacGain);
     state.pukeRisk = clamp(state.pukeRisk + beer.risk * (1 - state.tolerance * 0.22), 0, TUNING.PUKERISK_MAX);
+    state.bodie.foamUntil = state.timeMs + 2000;
     if (beer.id === "mystery") {
       state.effects.mysteryRushMs = Math.max(state.effects.mysteryRushMs, TUNING.MYSTERY_GOD_MODE_MS);
       addLog(`${beer.name} detonates your senses. God mode... probably.`);
@@ -978,6 +1099,7 @@
       finishBonus(action.meta || {});
     }
     state.currentAction = null;
+    state.bodie.repairIntensity = 0;
   }
 
   function resetStreak(reasonText) {
@@ -1002,6 +1124,7 @@
     state.pukeCooldownMs = TUNING.PUKERISK_COOLDOWN_MS;
     setBodieMode("puke", 1800, ["Nope nope nope.", "Containment breach in progress."]);
     setBodieOverlay("puke", 1400);
+    addDirt(randInt(2, 5));
     addLog("Puke warning! Mash to hold it together.");
     playTone("warn");
   }
@@ -1029,6 +1152,7 @@
           );
         }
       }
+      addDirt(randInt(4, 8), "Embarrassment residue added.");
       addLog("Catastrophic puke. Massive delay.");
       setBodieMode("puke", 2400, ["The floor did not deserve this."]);
       setBodieOverlay("puke", 1800);
@@ -1057,6 +1181,7 @@
       reason,
     };
     state.currentAction = null;
+    addDirt(randInt(5, 9), "KO nap in a puddle. Extra grime acquired.");
     setBodieMode("ko", TUNING.KO_WAKE_DELAY_MS + 800, ["Tell my sockets I love them."]);
     addLog("Bodie hits the floor. Lights out.");
     playTone("ko");
@@ -1183,6 +1308,10 @@
       if (car) {
         car.remainingRepairMs = Math.max(0, car.remainingRepairMs - delta);
       }
+      const progress = clamp((state.currentAction.totalMs - state.currentAction.remainingMs) / state.currentAction.totalMs, 0, 1);
+      state.bodie.repairIntensity = progress > 0.8 ? clamp((progress - 0.8) / 0.2, 0, 1) : 0;
+    } else {
+      state.bodie.repairIntensity = 0;
     }
 
     if (state.currentAction.remainingMs <= 0) {
@@ -1250,6 +1379,7 @@
     state.bac = clamp(state.bac - bacDecayPerSec * dt, 0, 1.5);
     state.hydration = clamp(state.hydration + 0.016 * dt, 0, 1);
     state.tolerance = clamp(state.tolerance + 0.009 * dt, 0, 1);
+    state.bodie.dirt = clamp(state.bodie.dirt - 0.16 * dt, 0, 100);
     syncDrunkFromBac();
 
     if (state.drunkMeter > TUNING.PUKE_HIGH_METER_THRESHOLD) {
@@ -1581,7 +1711,7 @@
                   <span class="name">${car.name}</span>
                   <span class="tier">${car.difficultyTier}</span>
                 </div>
-                <p class="stats">Base ${car.basePoints} pts | ${formatSeconds(car.repairTimeMs)} repair</p>
+                <p class="stats">Base ${car.basePoints} pts | ${formatSeconds(car.repairTimeMs)} repair | ${car.repairStyle.replace("repairing_", "")}</p>
                 <p class="sub">${statusText}</p>
                 <div class="patience-track" aria-hidden="true">
                   <div class="patience-fill" style="width:${patiencePct.toFixed(1)}%"></div>
@@ -1749,7 +1879,10 @@
     if (!ui.bodieStage || !ui.bodieCaption) {
       return;
     }
-    ui.bodieStage.className = `bodie-stage mode-${state.bodie.mode} overlay-${state.bodie.overlayMode}`;
+    updateBodieAppearance();
+    const foamClass = state.timeMs < state.bodie.foamUntil ? "foam-drip" : "";
+    ui.bodieStage.className = `bodie-stage mode-${state.bodie.mode} overlay-${state.bodie.overlayMode} ${foamClass} dirt-${getDirtStage(state.bodie.dirt)}`.trim();
+    ui.bodieStage.style.setProperty("--repair-intensity", state.bodie.repairIntensity.toFixed(3));
     ui.bodieCaption.textContent = state.bodie.caption;
   }
 
@@ -1864,6 +1997,7 @@
         id: car.id,
         name: car.name,
         tier: car.difficultyTier,
+        repair_style: car.repairStyle,
         base_points: car.basePoints,
         repair_remaining_ms: Math.round(car.remainingRepairMs),
         patience_remaining_ms: Math.round(car.patienceMs),
