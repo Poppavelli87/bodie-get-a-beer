@@ -1,0 +1,8 @@
+Thumbs.db
+.DS_Store
+node_modules/
+output/
+sim_actions.json
+risk_actions.json
+thing_actions.json
+verify_play.js
