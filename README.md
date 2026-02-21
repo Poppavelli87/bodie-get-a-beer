@@ -2,12 +2,17 @@
 
 Bodie Get A Beer is a fast arcade time-management game about balancing wrench work and bad decisions. Fix cars for points, drink to boost your multiplier, and avoid puking or getting KO'd before the shift ends.
 
-## New in v1.1
+## New in v1.3
 
 - Reworked intoxication into a layered model: `BAC` is now the source of truth and `DrunkMeter` is a curved UI projection. Beer effects linger longer and decay more smoothly.
 - Added hydration/tolerance interactions, sustained-high intoxication puke logic, BAC overload KO checks, and a post-KO hangover crash window.
 - Added a flow pacing perk for keeping DrunkMeter in the 70-85 zone: it builds momentum for better repair speed and streak value.
 - Added an animated **Bodie Stage** panel with state-driven action animations (idle, repair, drink, cigarette, dab, puke, KO) plus rotating comedic captions.
+
+- Added local **Top 10 High Scores** (`localStorage`) with name entry validation, reset option, and a dedicated modal table.
+- Added an end-of-shift **Results** modal (final score, best streak, drunk stage, dirt stage, funniest recent Bodie line) with Play Again / High Scores / Share actions.
+- Added **Share Score** support using native Web Share when available, plus clipboard fallback + toast guidance.
+- Added shared-score URL banner (`?share=1&score=...&name=...`) so challenge links can show a brag prompt on load.
 
 
 ## Drunk Mind Engine (v1.2)
@@ -108,6 +113,14 @@ Mobile mode now uses orientation gating + a desktop-like 3-panel landscape layou
   - Queue/log keep `touch-action: pan-y` for internal scroll.
   - Mobile visual effects are reduced for smoother play.
 
+## Sharing Scores
+
+- At shift end, open **Results** and hit **Share**.
+- If your browser supports `navigator.share`, the native share sheet opens.
+- Otherwise the game copies share text to clipboard and shows a toast with paste guidance.
+- Shared challenge links include query params (example: `?share=1&score=12340&name=PAWEL`) and display a dismissible banner on load.
+- Query params are display-only and do not write into leaderboard data.
+
 ## Controls
 
 - `1 / 2 / 3 / 4` select beer
@@ -131,7 +144,9 @@ Extra accessibility keys:
 
 Stored in `localStorage`:
 
-- High score
+- Legacy single-session high score
+- Top-10 high score list (`bodie_highscores_v1`)
+- Last entered player name (`bodie_player_name`)
 - Sound setting
 - UI settings (compact mode + auto-pause portrait + banter toggles)
 
