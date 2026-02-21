@@ -509,3 +509,210 @@ button:focus-visible,
     align-items: flex-start;
   }
 }
+
+.game-shell.is-timewarp {
+  animation: timewarp 0.5s ease-in-out 2;
+}
+
+@keyframes timewarp {
+  0%,
+  100% {
+    filter: saturate(1) hue-rotate(0deg);
+  }
+  50% {
+    filter: saturate(1.4) hue-rotate(-18deg);
+  }
+}
+
+.bodie-group {
+  background: #fff7e8;
+}
+
+.bodie-stage {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid #33200c;
+  border-radius: 12px;
+  height: 210px;
+  background: linear-gradient(180deg, #dff0ff, #f6d6a9 65%, #b98d57 66%, #8c6439 100%);
+}
+
+.bodie-character {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: 108px;
+  animation: bodie-idle 2.4s ease-in-out infinite;
+}
+
+.bodie-head {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #2a1a07;
+  background: #ffd8b3;
+  margin: 0 auto;
+  position: relative;
+}
+
+.eyes {
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 11px 0;
+}
+
+.eyes span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #1a140f;
+}
+
+.mouth {
+  width: 20px;
+  height: 10px;
+  border-bottom: 3px solid #7a2e2e;
+  border-radius: 0 0 12px 12px;
+  margin: 7px auto 0;
+}
+
+.bodie-body {
+  width: 72px;
+  height: 72px;
+  margin: -2px auto 0;
+  border: 2px solid #2a1a07;
+  border-radius: 12px;
+  background: #2e78d1;
+}
+
+.bodie-arm {
+  position: absolute;
+  top: 58px;
+  width: 14px;
+  height: 52px;
+  background: #ffd8b3;
+  border: 2px solid #2a1a07;
+  border-radius: 12px;
+  transform-origin: top center;
+}
+
+.arm-left { left: 12px; transform: rotate(16deg); }
+.arm-right { right: 12px; transform: rotate(-12deg); }
+
+.bodie-prop {
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.2s ease;
+}
+
+.bodie-prop.beer { left: 60%; top: 90px; font-size: 1.7rem; }
+.bodie-prop.dab { left: 62%; top: 85px; font-size: 1.3rem; }
+.bodie-prop.wrench { left: 64%; top: 94px; font-size: 1.4rem; }
+.bodie-prop.cig {
+  left: 62%;
+  top: 104px;
+  width: 24px;
+  height: 6px;
+  background: #f4f4f4;
+  border: 1px solid #222;
+  border-radius: 4px;
+}
+
+.bodie-prop.cig .ember {
+  position: absolute;
+  right: -3px;
+  top: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ff462e;
+}
+
+.stage-sparks span,
+.stage-cloud,
+.stage-splat,
+.bodie-zzzs {
+  position: absolute;
+  opacity: 0;
+}
+
+.stage-sparks span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffd44e;
+  box-shadow: 0 0 6px #ffd44e;
+  top: 112px;
+  left: 68%;
+}
+.stage-sparks span:nth-child(2) { top: 98px; left: 73%; }
+.stage-sparks span:nth-child(3) { top: 124px; left: 75%; }
+
+.stage-cloud {
+  width: 110px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230, 238, 255, 0.84), rgba(203, 214, 237, 0.05));
+  left: 58%;
+  top: 72px;
+}
+
+.stage-splat {
+  inset: 0;
+  background: radial-gradient(circle at 52% 56%, rgba(115, 182, 70, 0.82), rgba(115, 182, 70, 0) 44%);
+}
+
+.bodie-zzzs {
+  right: 18px;
+  top: 20px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #24345f;
+}
+
+.bodie-caption {
+  margin: 0.5rem 0 0;
+  font-style: italic;
+  color: #3e4953;
+  min-height: 1.3em;
+}
+
+.mode-idle .bodie-character { animation: bodie-idle 2.4s ease-in-out infinite; }
+.mode-repairing .arm-right { animation: wrench-swing 0.5s linear infinite; }
+.mode-repairing .bodie-prop.wrench,
+.mode-drinking .bodie-prop.beer,
+.mode-cigarette .bodie-prop.cig,
+.mode-dab .bodie-prop.dab { opacity: 1; transform: scale(1); }
+.mode-repairing .stage-sparks span { opacity: 1; animation: sparks 0.45s linear infinite; }
+
+.mode-drinking .bodie-character { animation: drink-tilt 1s ease-in-out infinite; }
+.mode-cigarette .eyes span { height: 4px; margin-top: 3px; }
+.mode-cigarette .stage-cloud { opacity: 0.7; animation: smoke 2.4s ease-out infinite; }
+.mode-dab .bodie-character { animation: dab-hit 2s ease-in-out infinite; }
+.mode-dab .stage-cloud { opacity: 0.82; animation: smoke 2.8s ease-out infinite; }
+.mode-puke .bodie-character { animation: puke-shake 0.3s linear infinite; }
+.mode-puke .stage-splat { opacity: 1; animation: splat 1s ease-out; }
+.mode-ko .bodie-character { opacity: 0.5; transform: translateX(-50%) rotate(84deg); transition: transform 0.5s ease; }
+.mode-ko .bodie-zzzs { opacity: 1; animation: zzz 1.4s ease-in-out infinite; }
+
+@keyframes bodie-idle { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-4px)} }
+@keyframes wrench-swing { 0%,100%{transform:rotate(-12deg)} 50%{transform:rotate(-68deg)} }
+@keyframes sparks { 0%{transform:scale(0.4);opacity:0.3} 70%{transform:scale(1.2);opacity:1} 100%{transform:translate(6px,-12px);opacity:0} }
+@keyframes drink-tilt { 0%,100%{transform:translateX(-50%) rotate(0)} 45%,60%{transform:translateX(-50%) rotate(-15deg)} }
+@keyframes smoke { 0%{transform:scale(0.6) translateY(10px);opacity:0.1} 60%{opacity:0.8} 100%{transform:scale(1.2) translateY(-20px);opacity:0} }
+@keyframes dab-hit { 0%,100%{transform:translateX(-50%) scale(1)} 40%{transform:translateX(-50%) scale(1.07) rotate(-7deg)} }
+@keyframes puke-shake { 0%,100%{transform:translateX(-50%) translateX(0)} 25%{transform:translateX(calc(-50% - 4px))} 75%{transform:translateX(calc(-50% + 4px))} }
+@keyframes splat { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
+@keyframes zzz { 0%,100%{transform:translateY(0);opacity:0.45} 50%{transform:translateY(-7px);opacity:1} }
+
+@media (max-width: 740px) {
+  .bodie-stage {
+    height: 160px;
+  }
+  .bodie-character {
+    transform: translateX(-50%) scale(0.82);
+    bottom: 10px;
+  }
+}
