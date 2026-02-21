@@ -17,6 +17,7 @@
       <div class="header-buttons">
         <button id="soundToggle" class="hud-btn" type="button" aria-pressed="true">Sound: On</button>
         <button id="compactModeToggle" class="hud-btn" type="button" aria-pressed="false">Compact: Auto</button>
+        <button id="mobileLayoutToggle" class="hud-btn" type="button" aria-pressed="true">Mobile Layout: 3-Panel (Recommended)</button>
         <button id="portraitPauseToggle" class="hud-btn" type="button" aria-pressed="true">Auto-pause portrait: On</button>
         <button id="pauseBtn" class="hud-btn" type="button">Pause (P)</button>
         <button id="resetBtn" class="hud-btn" type="button">Reset (R)</button>
@@ -68,6 +69,29 @@
           <div id="pukeRiskFill" class="meter-fill puke"></div>
         </div>
       </article>
+    </section>
+
+    <section id="mobileArena" class="mobile-arena" aria-label="Mobile 3 panel game layout">
+      <div id="mobilePanelLeft" class="mobile-panel mobile-panel-left">
+        <h2>Movement</h2>
+        <canvas id="leftPadCanvas" class="control-canvas" width="280" height="280" aria-label="Movement joystick"></canvas>
+      </div>
+      <div id="mobilePanelCenter" class="mobile-panel mobile-panel-center">
+        <canvas id="gameCanvas" class="game-canvas" width="960" height="540" aria-label="Savoryville game viewport"></canvas>
+      </div>
+      <div id="mobilePanelRight" class="mobile-panel mobile-panel-right">
+        <button id="mobilePauseBtn" class="hud-btn mobile-pause" type="button">Pause</button>
+        <section class="mobile-hud-stack" aria-label="Quick HUD">
+          <p id="mobileHeartsHud">❤️ x3</p>
+          <p id="mobileBaconHud">🥓 x0</p>
+          <p id="mobileLevelHud">Level 1</p>
+        </section>
+        <div class="mobile-actions">
+          <button id="mobileSpecialBtn" class="touch-btn special" type="button">Special</button>
+          <button id="mobileJumpBtn" class="touch-btn jump" type="button">Jump</button>
+        </div>
+        <button id="leftHandToggle" class="hud-btn" type="button" aria-pressed="false">Left-handed: Off</button>
+      </div>
     </section>
 
     <main class="main-grid">
@@ -197,9 +221,10 @@
 
   <div id="rotateOverlay" class="rotate-overlay" role="dialog" aria-live="assertive" aria-modal="true" aria-hidden="true">
     <div class="rotate-card">
-      <div class="phone-rotator" aria-hidden="true"><span class="phone"></span></div>
-      <h2>Rotate to Play</h2>
-      <p>Bodie can't wrench in portrait. Rotate your phone.</p>
+      <canvas id="rotateHintCanvas" width="180" height="180" class="rotate-hint-canvas" aria-hidden="true"></canvas>
+      <h2>Rotate to Landscape</h2>
+      <p>Savoryville plays best wide-screen.</p>
+      <p class="rotate-helper">Tap to re-check</p>
     </div>
   </div>
 

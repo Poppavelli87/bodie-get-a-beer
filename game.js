@@ -247,6 +247,8 @@
       soundOn: true,
       compactMode: "auto",
       autoPauseOnPortrait: true,
+      mobile3PanelLayout: true,
+      leftHanded: false,
     },
     rngSeed: 0x43f4b6d1,
     uiPanels: { queueOpen: true, actionOpen: true, logOpen: false, initialized: false },
@@ -287,6 +289,7 @@
     bodieStage: document.getElementById("bodieStage"),
     bodieCaption: document.getElementById("bodieCaption"),
     compactModeToggle: document.getElementById("compactModeToggle"),
+    mobileLayoutToggle: document.getElementById("mobileLayoutToggle"),
     portraitPauseToggle: document.getElementById("portraitPauseToggle"),
     actionPauseBtn: document.getElementById("actionPauseBtn"),
     layoutIndicator: document.getElementById("layoutIndicator"),
@@ -313,6 +316,20 @@
     dockPauseBtn: document.getElementById("dockPauseBtn"),
     dockSelectedCar: document.getElementById("dockSelectedCar"),
     mobileCarQuickSelect: document.getElementById("mobileCarQuickSelect"),
+    mobileArena: document.getElementById("mobileArena"),
+    mobilePanelLeft: document.getElementById("mobilePanelLeft"),
+    mobilePanelCenter: document.getElementById("mobilePanelCenter"),
+    mobilePanelRight: document.getElementById("mobilePanelRight"),
+    gameCanvas: document.getElementById("gameCanvas"),
+    leftPadCanvas: document.getElementById("leftPadCanvas"),
+    mobilePauseBtn: document.getElementById("mobilePauseBtn"),
+    mobileJumpBtn: document.getElementById("mobileJumpBtn"),
+    mobileSpecialBtn: document.getElementById("mobileSpecialBtn"),
+    leftHandToggle: document.getElementById("leftHandToggle"),
+    rotateHintCanvas: document.getElementById("rotateHintCanvas"),
+    mobileHeartsHud: document.getElementById("mobileHeartsHud"),
+    mobileBaconHud: document.getElementById("mobileBaconHud"),
+    mobileLevelHud: document.getElementById("mobileLevelHud"),
   };
 
   let currentLayout = "desktop";
@@ -328,6 +345,27 @@
   let rafId = 0;
   let lastFrameTs = performance.now();
   let accumulatorMs = 0;
+  let lastRotateOverlayFrame = 0;
+
+  const BASE_W = 960;
+  const BASE_H = 540;
+  const mobileRender = {
+    dpr: 1,
+    leftPanelW: 180,
+    rightPanelW: 180,
+    centerX: 180,
+    centerW: 600,
+    centerH: 540,
+    scale: 1,
+    gameOffsetX: 180,
+    gameOffsetY: 0,
+  };
+
+  const touchState = {
+    leftHanded: false,
+    joystick: { active: false, id: null, baseX: 0, baseY: 0, dx: 0, dy: 0 },
+    rightTouches: new Map(),
+  };
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -337,6 +375,17 @@
     return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
   }
 
+  function isProbablyMobileUA() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  }
+
+  function isLandscapeOrientation() {
+    if (window.screen?.orientation?.type) {
+      return window.screen.orientation.type.includes("landscape");
+    }
+    return window.matchMedia("(orientation: landscape)").matches;
+  }
+
   function isSmallViewport() {
     const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
     const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
@@ -344,7 +393,7 @@
   }
 
   function isMobileDevice() {
-    return isTouchDevice() && isSmallViewport();
+    return (window.matchMedia("(pointer: coarse)").matches || isProbablyMobileUA()) && isSmallViewport();
   }
 
   function isMobileLayout() {
@@ -407,20 +456,28 @@
   function detectLayout() {
     const vw = window.visualViewport ? Math.round(window.visualViewport.width) : window.innerWidth;
     const vh = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
-    if (!isMobileDevice()) {
+    const mobile = isMobileDevice();
+    const landscape = isLandscapeOrientation();
+    if (!mobile) {
       currentLayout = "desktop";
     } else {
-      currentLayout = vh > vw ? "mobilePortraitBlocked" : "mobileLandscape3";
+      currentLayout = landscape && state.settings.mobile3PanelLayout ? "mobileLandscape3" : landscape ? "desktop" : "mobilePortraitBlocked";
     }
 
     const isRotateBlocked = currentLayout === "mobilePortraitBlocked";
     if (isRotateBlocked && state.settings.autoPauseOnPortrait && !state.paused && !state.shiftEnded && !state.event) {
       state.paused = true;
       autoPausedByRotateGate = true;
+      if (audioCtx && audioCtx.state === "running") {
+        audioCtx.suspend().catch(() => {});
+      }
       addLog("Auto-paused in portrait. Bodie needs landscape.");
     } else if (!isRotateBlocked && autoPausedByRotateGate && !state.shiftEnded && !state.event) {
       state.paused = false;
       autoPausedByRotateGate = false;
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
       addLog("Landscape restored. Back to wrenching.");
     }
 
@@ -431,11 +488,139 @@
     document.body.dataset.layout = currentLayout;
     document.body.dataset.touch = String(isTouchDevice());
     document.body.dataset.rotateBlocked = String(isRotateBlocked);
-    document.body.dataset.mobileEffects = isMobileDevice() ? "reduced" : "full";
+    document.body.dataset.mobileEffects = mobile ? "reduced" : "full";
     document.body.dataset.compact = String(getCompactModeEnabled());
+    document.body.dataset.leftHanded = String(touchState.leftHanded);
     ui.rotateOverlay.setAttribute("aria-hidden", String(!isRotateBlocked));
     ui.layoutIndicator.textContent = `Landscape Mode: ${currentLayout === "desktop" ? "Desktop" : isRotateBlocked ? "Rotate Required" : "Mobile 3-Panel"}`;
     moveStageBlocksIntoMobilePanel(currentLayout === "mobileLandscape3");
+    computeMobileLayout(vw, vh);
+  }
+
+  function computeMobileLayout(vw, vh) {
+    if (!ui.gameCanvas) return;
+    const W = vw || window.innerWidth;
+    const H = vh || window.innerHeight;
+    const leftPanelW = clamp(W * 0.22, 140, 260);
+    const rightPanelW = clamp(W * 0.22, 140, 260);
+    const centerW = Math.max(220, W - leftPanelW - rightPanelW);
+    const centerH = H;
+    const centerX = touchState.leftHanded ? rightPanelW : leftPanelW;
+    const scale = Math.min(centerW / BASE_W, centerH / BASE_H);
+    const gameOffsetX = centerX + (centerW - BASE_W * scale) / 2;
+    const gameOffsetY = (centerH - BASE_H * scale) / 2;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+
+    Object.assign(mobileRender, { dpr, leftPanelW, rightPanelW, centerW, centerH, centerX, scale, gameOffsetX, gameOffsetY });
+
+    ui.gameCanvas.width = Math.floor(W * dpr);
+    ui.gameCanvas.height = Math.floor(H * dpr);
+    ui.gameCanvas.style.width = `${W}px`;
+    ui.gameCanvas.style.height = `${H}px`;
+
+    if (ui.leftPadCanvas) {
+      const side = Math.floor(Math.min(leftPanelW - 24, H * 0.55));
+      ui.leftPadCanvas.width = Math.max(160, side * dpr);
+      ui.leftPadCanvas.height = Math.max(160, side * dpr);
+      ui.leftPadCanvas.style.width = `${Math.max(160, side)}px`;
+      ui.leftPadCanvas.style.height = `${Math.max(160, side)}px`;
+    }
+
+    document.documentElement.style.setProperty("--left-panel-w", `${Math.round(leftPanelW)}px`);
+    document.documentElement.style.setProperty("--right-panel-w", `${Math.round(rightPanelW)}px`);
+  }
+
+  function vibratePulse(ms) {
+    if (reduceMotion || typeof navigator.vibrate !== "function") return;
+    navigator.vibrate(ms);
+  }
+
+  function renderRotateHint(ts = performance.now()) {
+    if (!ui.rotateHintCanvas) return;
+    const ctx = ui.rotateHintCanvas.getContext("2d");
+    if (!ctx) return;
+    const w = ui.rotateHintCanvas.width;
+    const h = ui.rotateHintCanvas.height;
+    const t = ts * 0.002;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, 70, 0, Math.PI*2);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(Math.sin(t) * 0.8);
+    ctx.fillStyle = "#f5d7a4";
+    ctx.fillRect(-22, -36, 44, 72);
+    ctx.clearRect(-16, -29, 32, 50);
+    ctx.restore();
+    ctx.strokeStyle = "#f5d7a4";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, 56, -0.5, 1.8);
+    ctx.stroke();
+  }
+
+  function renderMobileCanvas() {
+    if (!ui.gameCanvas || currentLayout !== "mobileLandscape3") return;
+    const ctx = ui.gameCanvas.getContext("2d", { alpha: false });
+    if (!ctx) return;
+    const { dpr, leftPanelW, rightPanelW, centerX, centerW, centerH, scale, gameOffsetX, gameOffsetY } = mobileRender;
+    const W = ui.gameCanvas.width / dpr;
+    const H = ui.gameCanvas.height / dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, W, H);
+
+    const leftX = touchState.leftHanded ? W - leftPanelW : 0;
+    const rightX = touchState.leftHanded ? 0 : W - rightPanelW;
+
+    const leftGrad = ctx.createLinearGradient(leftX, 0, leftX + leftPanelW, H);
+    leftGrad.addColorStop(0, "#4e3220"); leftGrad.addColorStop(1, "#2d2017");
+    ctx.fillStyle = leftGrad; ctx.fillRect(leftX, 0, leftPanelW, H);
+    const rightGrad = ctx.createLinearGradient(rightX, 0, rightX + rightPanelW, H);
+    rightGrad.addColorStop(0, "#2a2635"); rightGrad.addColorStop(1, "#1b1a24");
+    ctx.fillStyle = rightGrad; ctx.fillRect(rightX, 0, rightPanelW, H);
+
+    ctx.fillStyle = "#121a24";
+    ctx.fillRect(centerX, 0, centerW, centerH);
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(centerX, 0, 2, H);
+    ctx.fillRect(centerX + centerW - 2, 0, 2, H);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(centerX, 0, centerW, centerH);
+    ctx.clip();
+    ctx.fillStyle = "#1e2d3b";
+    ctx.fillRect(centerX, 0, centerW, centerH);
+
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, gameOffsetX * dpr, gameOffsetY * dpr);
+    ctx.fillStyle = "#2e78d1";
+    ctx.fillRect(0, 0, BASE_W, BASE_H);
+    ctx.fillStyle = "#7cb4ff";
+    for (let i = 0; i < 14; i += 1) ctx.fillRect((i * 72 + (state.timeMs * 0.03) % 72), 80 + (i % 3) * 32, 22, 10);
+    ctx.fillStyle = "#f4efe2";
+    ctx.fillRect(80 + (state.timeMs * 0.12) % 700, 340, 80, 80);
+    ctx.restore();
+  }
+
+  function renderJoystickPad() {
+    if (!ui.leftPadCanvas || currentLayout !== "mobileLandscape3") return;
+    const ctx = ui.leftPadCanvas.getContext("2d");
+    if (!ctx) return;
+    const w = ui.leftPadCanvas.width;
+    const h = ui.leftPadCanvas.height;
+    const centerX = touchState.joystick.active ? touchState.joystick.baseX : w * 0.5;
+    const centerY = touchState.joystick.active ? touchState.joystick.baseY : h * 0.62;
+    const radius = Math.min(w, h) * 0.22;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "rgba(20,20,26,0.35)";
+    ctx.beginPath(); ctx.arc(centerX, centerY, radius * 1.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,226,164,0.35)";
+    ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.beginPath(); ctx.arc(centerX + touchState.joystick.dx, centerY + touchState.joystick.dy, radius * 0.45, 0, Math.PI * 2); ctx.fill();
   }
 
   function rand() {
@@ -612,6 +797,12 @@
       }
       if (["auto", "on", "off"].includes(parsed.compactMode)) {
         state.settings.compactMode = parsed.compactMode;
+      }
+      if (typeof parsed.mobile3PanelLayout === "boolean") {
+        state.settings.mobile3PanelLayout = parsed.mobile3PanelLayout;
+      }
+      if (typeof parsed.leftHanded === "boolean") {
+        state.settings.leftHanded = parsed.leftHanded;
       }
     } catch (_) {
       state.settings.soundOn = true;
@@ -1454,6 +1645,12 @@
       detectLayout();
     });
 
+    ui.mobileLayoutToggle.addEventListener("click", () => {
+      state.settings.mobile3PanelLayout = !state.settings.mobile3PanelLayout;
+      saveSettings();
+      detectLayout();
+    });
+
     ui.portraitPauseToggle.addEventListener("click", () => {
       state.settings.autoPauseOnPortrait = !state.settings.autoPauseOnPortrait;
       saveSettings();
@@ -1509,6 +1706,77 @@
         state.paused = false;
       }
     });
+
+    if (ui.rotateOverlay) {
+      ui.rotateOverlay.addEventListener("click", detectLayout);
+    }
+
+    tapAndRun(ui.mobilePauseBtn, togglePause);
+    tapAndRun(ui.mobileJumpBtn, () => {
+      startDrink();
+      playTone("tap");
+      vibratePulse(18);
+    });
+    tapAndRun(ui.mobileSpecialBtn, () => {
+      startBonus("thing");
+      playTone("start");
+      vibratePulse(24);
+    });
+
+    ui.leftHandToggle.addEventListener("click", () => {
+      touchState.leftHanded = !touchState.leftHanded;
+      state.settings.leftHanded = touchState.leftHanded;
+      ui.leftHandToggle.setAttribute("aria-pressed", String(touchState.leftHanded));
+      ui.leftHandToggle.textContent = `Left-handed: ${touchState.leftHanded ? "On" : "Off"}`;
+      saveSettings();
+      detectLayout();
+    });
+
+    const onLeftTouch = (event) => {
+      if (currentLayout !== "mobileLandscape3") return;
+      for (const touch of event.changedTouches) {
+        if (touchState.joystick.active) continue;
+        touchState.joystick.active = true;
+        touchState.joystick.id = touch.identifier;
+        const rect = ui.leftPadCanvas.getBoundingClientRect();
+        const scaleX = ui.leftPadCanvas.width / rect.width;
+        const scaleY = ui.leftPadCanvas.height / rect.height;
+        touchState.joystick.baseX = (touch.clientX - rect.left) * scaleX;
+        touchState.joystick.baseY = (touch.clientY - rect.top) * scaleY;
+      }
+    };
+    const onLeftMove = (event) => {
+      if (!touchState.joystick.active) return;
+      const rect = ui.leftPadCanvas.getBoundingClientRect();
+      const scaleX = ui.leftPadCanvas.width / rect.width;
+      const scaleY = ui.leftPadCanvas.height / rect.height;
+      const radius = Math.min(ui.leftPadCanvas.width, ui.leftPadCanvas.height) * 0.22;
+      for (const touch of event.changedTouches) {
+        if (touch.identifier !== touchState.joystick.id) continue;
+        const x = (touch.clientX - rect.left) * scaleX;
+        const y = (touch.clientY - rect.top) * scaleY;
+        let dx = x - touchState.joystick.baseX;
+        let dy = y - touchState.joystick.baseY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > radius) {
+          const k = radius / dist;
+          dx *= k; dy *= k;
+        }
+        touchState.joystick.dx = Math.abs(dx) < radius * 0.16 ? 0 : dx;
+        touchState.joystick.dy = Math.abs(dy) < radius * 0.16 ? 0 : dy;
+      }
+      event.preventDefault();
+    };
+    const onLeftEnd = (event) => {
+      for (const touch of event.changedTouches) {
+        if (touch.identifier !== touchState.joystick.id) continue;
+        touchState.joystick = { active: false, id: null, baseX: 0, baseY: 0, dx: 0, dy: 0 };
+      }
+    };
+    ui.leftPadCanvas.addEventListener("touchstart", onLeftTouch, { passive: true });
+    ui.leftPadCanvas.addEventListener("touchmove", onLeftMove, { passive: false });
+    ui.leftPadCanvas.addEventListener("touchend", onLeftEnd, { passive: true });
+    ui.leftPadCanvas.addEventListener("touchcancel", onLeftEnd, { passive: true });
   }
 
   function renderBeerList() {
@@ -1711,6 +1979,10 @@
     const compactText = state.settings.compactMode === "on" ? "Compact: On" : state.settings.compactMode === "off" ? "Compact: Off" : "Compact: Auto";
     ui.compactModeToggle.textContent = compactText;
     ui.compactModeToggle.setAttribute("aria-pressed", String(getCompactModeEnabled()));
+    ui.mobileLayoutToggle.textContent = `Mobile Layout: ${state.settings.mobile3PanelLayout ? "3-Panel (Recommended)" : "Classic"}`;
+    ui.mobileLayoutToggle.setAttribute("aria-pressed", String(state.settings.mobile3PanelLayout));
+    ui.leftHandToggle.textContent = `Left-handed: ${touchState.leftHanded ? "On" : "Off"}`;
+    ui.leftHandToggle.setAttribute("aria-pressed", String(touchState.leftHanded));
     ui.portraitPauseToggle.textContent = `Auto-pause portrait: ${state.settings.autoPauseOnPortrait ? "On" : "Off"}`;
     ui.portraitPauseToggle.setAttribute("aria-pressed", String(state.settings.autoPauseOnPortrait));
     ui.actionPauseBtn.textContent = state.paused ? "Resume" : "Pause";
@@ -1743,6 +2015,9 @@
     ui.mobileCarText.textContent = selected ? `Car: ${selected.name}` : "Car: none";
     ui.mobileMultiplierText.textContent = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
     ui.dockSelectedCar.textContent = selected ? `Selected: ${selected.name}` : "Selected: none";
+    if (ui.mobileHeartsHud) ui.mobileHeartsHud.textContent = `❤️ x${Math.max(1, 3 - Math.floor(state.pukeRisk / 40))}`;
+    if (ui.mobileBaconHud) ui.mobileBaconHud.textContent = `🥓 x${Math.floor(state.score / 400)}`;
+    if (ui.mobileLevelHud) ui.mobileLevelHud.textContent = `Level ${1 + Math.floor(state.timeMs / 45000)}`;
   }
 
   function renderBodie() {
@@ -1769,6 +2044,8 @@
   }
 
   function render() {
+    renderMobileCanvas();
+    renderJoystickPad();
     renderHUD();
     renderBeerList();
     renderQueue();
@@ -1785,8 +2062,15 @@
     const delta = Math.min(120, ts - lastFrameTs);
     lastFrameTs = ts;
     if (document.visibilityState !== "hidden") {
-      tick(delta);
-      render();
+      if (isPortraitBlockedLayout()) {
+        if (ts - lastRotateOverlayFrame > 48) {
+          renderRotateHint(ts);
+          lastRotateOverlayFrame = ts;
+        }
+      } else {
+        tick(delta);
+        render();
+      }
     }
     rafId = requestAnimationFrame(frame);
   }
@@ -1883,10 +2167,25 @@
   window.advanceTime = advanceTime;
 
   loadStorage();
+  touchState.leftHanded = !!state.settings.leftHanded;
   setupMotionPreferenceListener();
   detectLayout();
   resetRun(true);
   bindEvents();
   startLoop();
   render();
+
+  /*
+    Mobile landscape-first update summary:
+    - Added mobile orientation gate with animated rotate overlay and low-cost portrait loop.
+    - Added mobile 3-panel arena (left movement, center canvas viewport, right actions/HUD).
+    - Added center-region scale math + DPR crisp canvas rendering + panel clipping.
+    - Added joystick touch handling, jump/special/pause touch actions, haptics + UI tones.
+    - Added settings toggles for mobile 3-panel mode and left-handed mode swap.
+
+    Quick rotate test (iOS/Android):
+    1) Open game on phone in portrait: verify rotate overlay shows and game is paused.
+    2) Rotate to landscape: overlay fades away and 3-panel layout appears.
+    3) Tap Jump/Special/Pause + move joystick area; verify feedback/haptics and resumed gameplay.
+  */
 })();
