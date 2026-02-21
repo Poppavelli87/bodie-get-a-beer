@@ -51,6 +51,31 @@ Bodie Get A Beer is a fast arcade time-management game about balancing wrench wo
 - **Smoke Dab**: bigger score + repair speed boost, higher paranoia risk.
 - **Do A Thing**: random goofy outcomes (great, weird, or terrible).
 
+## Mobile Play
+
+Mobile optimization now auto-detects touch + small-screen form factors with no setup:
+
+- **Adaptive layouts**
+  - Desktop (`>=900px`): original multi-panel setup.
+  - Mobile portrait: stacked single-column panels with collapsible Queue/Bodie/Log and a default-collapsed log.
+  - Mobile landscape: two-column split with queue/log on the left and actions/Bodie on the right.
+- **Fixed Action Dock (mobile only)**
+  - Always-visible actions: Drink, Fix, Cig, Dab, Thing, Pause.
+  - Segmented beer picker (Light/Tallboy/IPA/Mystery).
+  - Selected car indicator + quick select buttons for top queue cars.
+- **Touch-first behavior**
+  - Minimum 44px tap targets.
+  - Touch-action tuned to reduce accidental zoom/scroll during gameplay.
+  - iOS/WebAudio unlock on first interaction.
+- **Performance and comfort**
+  - Log capped to latest 30 lines.
+  - Queue rendering is DOM-cached and only updates when queue state changes.
+  - Auto-pause via Page Visibility API when tab goes background.
+  - Reduced-motion support and lower visual effect strength on mobile.
+- **Compact Mode setting**
+  - Header toggle cycles `Auto -> On -> Off` and stores preference in `localStorage`.
+  - Auto mode enables compact UI on small screens.
+
 ## Controls
 
 - `1 / 2 / 3 / 4` select beer
