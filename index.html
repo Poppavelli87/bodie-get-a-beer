@@ -8,13 +8,18 @@
 </head>
 <body>
   <div class="game-shell" id="gameShell">
-    <header class="top-bar">
+    <header id="hudRow" class="top-bar">
       <div class="title-block">
         <h1>Bodie Get A Beer</h1>
         <p>Fix rides, sip chaos, survive the shift.</p>
         <small id="layoutIndicator" class="layout-indicator">Landscape Mode: Desktop</small>
       </div>
-      <div class="header-buttons">
+      <div id="microHudRow" class="micro-hud-row" aria-live="polite">
+        <span id="microScore">Score: 0</span>
+        <span id="microTime">Time: 03:00</span>
+        <span id="microMult">1.0x</span>
+      </div>
+      <div class="header-buttons" id="headerButtons">
         <button id="soundToggle" class="hud-btn" type="button" aria-pressed="true">Sound: On</button>
         <button id="compactModeToggle" class="hud-btn" type="button" aria-pressed="false">Compact: Auto</button>
         <button id="mobileLayoutToggle" class="hud-btn" type="button" aria-pressed="true">Mobile Layout: 3-Panel (Recommended)</button>
@@ -23,6 +28,11 @@
         <button id="banterFrequencyToggle" class="hud-btn" type="button" aria-pressed="false">Banter Frequency: Normal</button>
         <button id="pauseBtn" class="hud-btn" type="button">Pause (P)</button>
         <button id="resetBtn" class="hud-btn" type="button">Reset (R)</button>
+        <button id="gearMenuBtn" class="hud-btn gear-btn" type="button" aria-expanded="false" aria-controls="gearMenu">⚙️</button>
+      </div>
+      <div id="gearMenu" class="gear-menu" hidden>
+        <p class="gear-title">Quick Settings</p>
+        <button id="debugToggle" class="hud-btn" type="button" aria-pressed="false">Show Layout Debug: Off</button>
       </div>
     </header>
 
@@ -32,17 +42,17 @@
       <span id="mobileMultiplierText">1.0x</span>
     </section>
 
-    <section class="hud-grid" aria-label="Run status">
+    <section id="statsRow" class="hud-grid" aria-label="Run status">
       <article class="stat-card">
         <h2>Score</h2>
         <p id="scoreValue">0</p>
       </article>
-      <article class="stat-card">
-        <h2>High Score</h2>
+      <article class="stat-card" id="highScoreCard">
+        <h2>High</h2>
         <p id="highScoreValue">0</p>
       </article>
       <article class="stat-card">
-        <h2>Shift Time</h2>
+        <h2>Time</h2>
         <p id="timerValue">03:00</p>
       </article>
       <article class="stat-card">
@@ -50,12 +60,12 @@
         <p id="multiplierValue">1.0x</p>
       </article>
       <article class="stat-card wide">
-        <h2>Mechanical Enlightenment Streak</h2>
-        <p id="streakValue">Keep DrunkMeter 70-85%</p>
+        <h2>Streak</h2>
+        <p id="streakValue">Keep Drunk 70-85%</p>
       </article>
-      <article class="meter-card wide">
+      <article class="meter-card wide" id="drunkMeterCard">
         <div class="meter-row">
-          <span>DrunkMeter</span>
+          <span>Drunk</span>
           <strong id="drunkMeterLabel">58%</strong>
         </div>
         <div class="meter-track" aria-hidden="true">
@@ -201,6 +211,7 @@
       <section class="panel log-panel" id="logPanel">
         <div class="panel-head">
           <button class="panel-toggle" id="logPanelToggle" type="button" aria-expanded="false">Log</button>
+          <button class="panel-toggle" id="logExpandToggle" type="button" aria-expanded="false">Expand</button>
           <h2>Shop Log</h2>
           <p>Bodie commentary, poor decisions, and miracles.</p>
         </div>
@@ -243,6 +254,8 @@
     </div>
   </div>
 
+
+  <aside id="layoutDebug" class="layout-debug" hidden></aside>
   <script src="game.js"></script>
 </body>
 </html>
