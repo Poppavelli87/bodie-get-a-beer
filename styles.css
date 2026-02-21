@@ -974,6 +974,87 @@ body[data-mobile-effects="reduced"] .stage-fluid-stream {
   font-size: 0.86rem;
 }
 
+
+.mobile-arena {
+  display: none;
+}
+
+.mobile-panel {
+  background: linear-gradient(180deg, rgba(255, 248, 232, 0.96), rgba(236, 224, 198, 0.96));
+  border: 2px solid #c7ba9f;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 14px rgba(6, 12, 24, 0.3);
+  min-height: 0;
+}
+
+.control-canvas,
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.mobile-panel-left,
+.mobile-panel-right {
+  padding: 0.45rem;
+  display: grid;
+  gap: 0.45rem;
+  align-content: start;
+}
+
+.mobile-panel-left h2,
+.mobile-panel-right h2 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4f5d67;
+}
+
+.mobile-panel-center {
+  overflow: hidden;
+  padding: 0;
+}
+
+.mobile-hud-stack p {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.mobile-actions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.touch-btn {
+  min-height: 56px;
+}
+
+.touch-btn.jump {
+  min-height: 70px;
+  font-size: 1.1rem;
+}
+
+.mobile-pause {
+  justify-self: end;
+  min-width: 88px;
+}
+
+.rotate-hint-canvas {
+  width: 120px;
+  height: 120px;
+  display: block;
+  margin: 0 auto 0.8rem;
+}
+
+.rotate-helper {
+  opacity: 0.8;
+  font-size: 0.86rem;
+}
+
 .tap-feedback {
   transform: scale(0.96) translateZ(0);
 }
@@ -1057,7 +1138,15 @@ body[data-reduced-motion="true"] * {
 
 body[data-rotate-blocked="true"] .rotate-overlay {
   display: grid;
+  animation: rotate-fade-in 240ms ease-out both;
 }
+
+body[data-rotate-blocked="false"] .rotate-overlay {
+  animation: rotate-fade-out 240ms ease-out both;
+}
+
+@keyframes rotate-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rotate-fade-out { from { opacity: 1; } to { opacity: 0; } }
 
 body[data-rotate-blocked="true"] .game-shell {
   pointer-events: none;
@@ -1121,10 +1210,20 @@ body[data-layout="mobileLandscape3"] .meter-card {
 }
 
 body[data-layout="mobileLandscape3"] .main-grid {
+  display: none;
+}
+
+body[data-layout="mobileLandscape3"] .mobile-arena {
   min-height: 0;
-  grid-template-columns: minmax(170px, 3fr) minmax(220px, 4fr) minmax(170px, 3fr);
+  display: grid;
+  grid-template-columns: var(--left-panel-w, 22vw) minmax(220px, 1fr) var(--right-panel-w, 22vw);
   gap: 0.45rem;
+  height: 100%;
   overflow: hidden;
+}
+
+body[data-layout="mobileLandscape3"][data-left-handed="true"] .mobile-arena {
+  grid-template-columns: var(--right-panel-w, 22vw) minmax(220px, 1fr) var(--left-panel-w, 22vw);
 }
 
 body[data-layout="mobileLandscape3"] .panel {
@@ -1231,3 +1330,6 @@ body[data-layout="mobilePortraitBlocked"] .panel-toggle {
 body[data-compact="true"] .panel-head p {
   display: none;
 }
+
+
+body[data-layout="mobileLandscape3"] { touch-action: none; overscroll-behavior: none; }
