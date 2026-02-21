@@ -246,6 +246,7 @@
     settings: {
       soundOn: true,
       compactMode: "auto",
+      autoPauseOnPortrait: true,
     },
     rngSeed: 0x43f4b6d1,
     uiPanels: { queueOpen: true, actionOpen: true, logOpen: false, initialized: false },
@@ -286,11 +287,17 @@
     bodieStage: document.getElementById("bodieStage"),
     bodieCaption: document.getElementById("bodieCaption"),
     compactModeToggle: document.getElementById("compactModeToggle"),
+    portraitPauseToggle: document.getElementById("portraitPauseToggle"),
+    actionPauseBtn: document.getElementById("actionPauseBtn"),
+    layoutIndicator: document.getElementById("layoutIndicator"),
+    rotateOverlay: document.getElementById("rotateOverlay"),
     mobileNowDoing: document.getElementById("mobileNowDoing"),
     mobileActionText: document.getElementById("mobileActionText"),
     mobileCarText: document.getElementById("mobileCarText"),
     mobileMultiplierText: document.getElementById("mobileMultiplierText"),
     queuePanel: document.getElementById("queuePanel"),
+    stagePanel: document.getElementById("stagePanel"),
+    stagePanelSlot: document.getElementById("stagePanelSlot"),
     actionPanel: document.getElementById("actionPanel"),
     logPanel: document.getElementById("logPanel"),
     queuePanelToggle: document.getElementById("queuePanelToggle"),
@@ -311,6 +318,10 @@
   let currentLayout = "desktop";
   let reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let autoPausedByVisibility = false;
+  let autoPausedByRotateGate = false;
+  let stageGroupPlaceholder = null;
+  let actionStatusPlaceholder = null;
+  let logPanelPlaceholder = null;
   let lastQueueSignature = "";
   let lastLogSignature = "";
   let audioCtx = null;
@@ -326,57 +337,105 @@
     return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
   }
 
-  function isSmallScreen() {
-    return Math.min(window.innerWidth, window.innerHeight) < 700;
+  function isSmallViewport() {
+    const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    return Math.min(vw, vh) < 800;
   }
 
-  function isMobileUA() {
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  function isMobileDevice() {
+    return isTouchDevice() && isSmallViewport();
   }
 
   function isMobileLayout() {
     return currentLayout !== "desktop";
   }
 
+  function isPortraitBlockedLayout() {
+    return currentLayout === "mobilePortraitBlocked";
+  }
+
   function getCompactModeEnabled() {
     if (state.settings.compactMode === "on") return true;
     if (state.settings.compactMode === "off") return false;
-    return isSmallScreen();
+    return isSmallViewport();
   }
 
-  function updatePanelCollapsedStates() {
-    const isPortraitMobile = currentLayout === "mobilePortrait";
-    ui.queuePanel.classList.toggle("collapsed", isPortraitMobile && !state.uiPanels.queueOpen);
-    ui.actionPanel.classList.toggle("collapsed", isPortraitMobile && !state.uiPanels.actionOpen);
-    ui.logPanel.classList.toggle("collapsed", isPortraitMobile && !state.uiPanels.logOpen);
-    ui.queuePanelToggle.setAttribute("aria-expanded", String(state.uiPanels.queueOpen));
-    ui.actionPanelToggle.setAttribute("aria-expanded", String(state.uiPanels.actionOpen));
-    ui.logPanelToggle.setAttribute("aria-expanded", String(state.uiPanels.logOpen));
+  function moveStageBlocksIntoMobilePanel(enableMobileStage) {
+    const bodieGroup = ui.actionPanel.querySelector(".bodie-group");
+    const actionStatusGroup = ui.actionStatus ? ui.actionStatus.closest(".action-group") : null;
+    if (!bodieGroup || !actionStatusGroup) {
+      return;
+    }
+    if (enableMobileStage) {
+      if (!stageGroupPlaceholder) {
+        stageGroupPlaceholder = document.createComment("bodie-group-placeholder");
+        bodieGroup.parentNode.insertBefore(stageGroupPlaceholder, bodieGroup);
+      }
+      if (!actionStatusPlaceholder) {
+        actionStatusPlaceholder = document.createComment("action-status-placeholder");
+        actionStatusGroup.parentNode.insertBefore(actionStatusPlaceholder, actionStatusGroup);
+      }
+      if (!logPanelPlaceholder) {
+        logPanelPlaceholder = document.createComment("log-panel-placeholder");
+        ui.logPanel.parentNode.insertBefore(logPanelPlaceholder, ui.logPanel);
+      }
+      if (bodieGroup.parentNode !== ui.stagePanelSlot) {
+        ui.stagePanelSlot.appendChild(ui.mobileNowDoing);
+        ui.stagePanelSlot.appendChild(bodieGroup);
+        ui.stagePanelSlot.appendChild(actionStatusGroup);
+      }
+      if (ui.logPanel.parentNode !== ui.actionPanel) {
+        ui.actionPanel.appendChild(ui.logPanel);
+      }
+      return;
+    }
+    if (stageGroupPlaceholder?.parentNode && bodieGroup.parentNode !== stageGroupPlaceholder.parentNode) {
+      stageGroupPlaceholder.parentNode.insertBefore(bodieGroup, stageGroupPlaceholder.nextSibling);
+    }
+    if (actionStatusPlaceholder?.parentNode && actionStatusGroup.parentNode !== actionStatusPlaceholder.parentNode) {
+      actionStatusPlaceholder.parentNode.insertBefore(actionStatusGroup, actionStatusPlaceholder.nextSibling);
+    }
+    if (logPanelPlaceholder?.parentNode && ui.logPanel.parentNode !== logPanelPlaceholder.parentNode) {
+      logPanelPlaceholder.parentNode.insertBefore(ui.logPanel, logPanelPlaceholder.nextSibling);
+    }
+    if (ui.mobileNowDoing.parentNode !== ui.gameShell) {
+      ui.gameShell.insertBefore(ui.mobileNowDoing, ui.gameShell.querySelector(".hud-grid"));
+    }
   }
 
-  function updateLayout() {
+  function detectLayout() {
     const vw = window.visualViewport ? Math.round(window.visualViewport.width) : window.innerWidth;
     const vh = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
-    if (vw >= 900) currentLayout = "desktop";
-    else currentLayout = vh >= vw ? "mobilePortrait" : "mobileLandscape";
+    if (!isMobileDevice()) {
+      currentLayout = "desktop";
+    } else {
+      currentLayout = vh > vw ? "mobilePortraitBlocked" : "mobileLandscape3";
+    }
+
+    const isRotateBlocked = currentLayout === "mobilePortraitBlocked";
+    if (isRotateBlocked && state.settings.autoPauseOnPortrait && !state.paused && !state.shiftEnded && !state.event) {
+      state.paused = true;
+      autoPausedByRotateGate = true;
+      addLog("Auto-paused in portrait. Bodie needs landscape.");
+    } else if (!isRotateBlocked && autoPausedByRotateGate && !state.shiftEnded && !state.event) {
+      state.paused = false;
+      autoPausedByRotateGate = false;
+      addLog("Landscape restored. Back to wrenching.");
+    }
+
+    if (!isRotateBlocked) {
+      autoPausedByRotateGate = false;
+    }
 
     document.body.dataset.layout = currentLayout;
     document.body.dataset.touch = String(isTouchDevice());
-    document.body.dataset.mobileUa = String(isMobileUA());
+    document.body.dataset.rotateBlocked = String(isRotateBlocked);
+    document.body.dataset.mobileEffects = isMobileDevice() ? "reduced" : "full";
     document.body.dataset.compact = String(getCompactModeEnabled());
-
-    if (currentLayout !== "mobilePortrait") {
-      state.uiPanels.queueOpen = true;
-      state.uiPanels.actionOpen = true;
-      state.uiPanels.logOpen = true;
-    } else if (state.uiPanels.initialized !== true) {
-      state.uiPanels.queueOpen = true;
-      state.uiPanels.actionOpen = true;
-      state.uiPanels.logOpen = false;
-      state.uiPanels.initialized = true;
-    }
-
-    updatePanelCollapsedStates();
+    ui.rotateOverlay.setAttribute("aria-hidden", String(!isRotateBlocked));
+    ui.layoutIndicator.textContent = `Landscape Mode: ${currentLayout === "desktop" ? "Desktop" : isRotateBlocked ? "Rotate Required" : "Mobile 3-Panel"}`;
+    moveStageBlocksIntoMobilePanel(currentLayout === "mobileLandscape3");
   }
 
   function rand() {
@@ -548,6 +607,9 @@
       if (typeof parsed.soundOn === "boolean") {
         state.settings.soundOn = parsed.soundOn;
       }
+      if (typeof parsed.autoPauseOnPortrait === "boolean") {
+        state.settings.autoPauseOnPortrait = parsed.autoPauseOnPortrait;
+      }
       if (["auto", "on", "off"].includes(parsed.compactMode)) {
         state.settings.compactMode = parsed.compactMode;
       }
@@ -672,7 +734,7 @@
   }
 
   function canStartAction() {
-    return state.running && !state.paused && !state.shiftEnded && !state.currentAction && !state.event;
+    return state.running && !state.paused && !state.shiftEnded && !state.currentAction && !state.event && !isPortraitBlockedLayout();
   }
 
   function startAction(payload) {
@@ -1308,6 +1370,10 @@
       event.preventDefault();
     }
 
+    if (isPortraitBlockedLayout()) {
+      return;
+    }
+
     if (state.event && state.event.type === "puke" && (key === " " || key === "enter")) {
       mashPuke();
       return;
@@ -1333,10 +1399,10 @@
   function bindEvents() {
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("pointerdown", ensureAudioContext, { passive: true });
-    window.addEventListener("resize", updateLayout);
-    window.addEventListener("orientationchange", updateLayout);
+    window.addEventListener("resize", detectLayout);
+    window.addEventListener("orientationchange", detectLayout);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", updateLayout);
+      window.visualViewport.addEventListener("resize", detectLayout);
     }
 
     document.addEventListener("visibilitychange", () => {
@@ -1356,7 +1422,7 @@
     });
 
     ui.gameShell.addEventListener("touchmove", (event) => {
-      if (!isMobileLayout()) return;
+      if (currentLayout !== "mobileLandscape3") return;
       if (event.target.closest(".car-queue") || event.target.closest(".log-feed")) return;
       event.preventDefault();
     }, { passive: false });
@@ -1385,7 +1451,13 @@
       const next = modeOrder[(modeOrder.indexOf(state.settings.compactMode) + 1) % modeOrder.length];
       state.settings.compactMode = next;
       saveSettings();
-      updateLayout();
+      detectLayout();
+    });
+
+    ui.portraitPauseToggle.addEventListener("click", () => {
+      state.settings.autoPauseOnPortrait = !state.settings.autoPauseOnPortrait;
+      saveSettings();
+      detectLayout();
     });
 
     tapAndRun(ui.drinkBtn, startDrink);
@@ -1401,19 +1473,7 @@
     tapAndRun(ui.dockDabBtn, () => startBonus("dab"));
     tapAndRun(ui.dockThingBtn, () => startBonus("thing"));
     tapAndRun(ui.dockPauseBtn, togglePause);
-
-    ui.queuePanelToggle.addEventListener("click", () => {
-      state.uiPanels.queueOpen = !state.uiPanels.queueOpen;
-      updatePanelCollapsedStates();
-    });
-    ui.actionPanelToggle.addEventListener("click", () => {
-      state.uiPanels.actionOpen = !state.uiPanels.actionOpen;
-      updatePanelCollapsedStates();
-    });
-    ui.logPanelToggle.addEventListener("click", () => {
-      state.uiPanels.logOpen = !state.uiPanels.logOpen;
-      updatePanelCollapsedStates();
-    });
+    tapAndRun(ui.actionPauseBtn, togglePause);
 
     const onBeerTap = (event) => {
       const target = event.target.closest("[data-index]");
@@ -1651,6 +1711,9 @@
     const compactText = state.settings.compactMode === "on" ? "Compact: On" : state.settings.compactMode === "off" ? "Compact: Off" : "Compact: Auto";
     ui.compactModeToggle.textContent = compactText;
     ui.compactModeToggle.setAttribute("aria-pressed", String(getCompactModeEnabled()));
+    ui.portraitPauseToggle.textContent = `Auto-pause portrait: ${state.settings.autoPauseOnPortrait ? "On" : "Off"}`;
+    ui.portraitPauseToggle.setAttribute("aria-pressed", String(state.settings.autoPauseOnPortrait));
+    ui.actionPauseBtn.textContent = state.paused ? "Resume" : "Pause";
   }
 
   function renderHUD() {
@@ -1821,7 +1884,7 @@
 
   loadStorage();
   setupMotionPreferenceListener();
-  updateLayout();
+  detectLayout();
   resetRun(true);
   bindEvents();
   startLoop();

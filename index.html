@@ -12,10 +12,12 @@
       <div class="title-block">
         <h1>Bodie Get A Beer</h1>
         <p>Fix rides, sip chaos, survive the shift.</p>
+        <small id="layoutIndicator" class="layout-indicator">Landscape Mode: Desktop</small>
       </div>
       <div class="header-buttons">
         <button id="soundToggle" class="hud-btn" type="button" aria-pressed="true">Sound: On</button>
         <button id="compactModeToggle" class="hud-btn" type="button" aria-pressed="false">Compact: Auto</button>
+        <button id="portraitPauseToggle" class="hud-btn" type="button" aria-pressed="true">Auto-pause portrait: On</button>
         <button id="pauseBtn" class="hud-btn" type="button">Pause (P)</button>
         <button id="resetBtn" class="hud-btn" type="button">Reset (R)</button>
       </div>
@@ -78,6 +80,14 @@
         <div id="carQueue" class="car-queue" role="listbox" aria-label="Cars waiting for repairs"></div>
       </section>
 
+      <section class="panel stage-panel" id="stagePanel">
+        <div class="panel-head">
+          <h2>Bodie Stage</h2>
+          <p>Now Doing + progress + chaos.</p>
+        </div>
+        <div id="stagePanelSlot" class="stage-panel-slot"></div>
+      </section>
+
       <section class="panel action-panel" id="actionPanel">
         <div class="panel-head">
           <button class="panel-toggle" id="actionPanelToggle" type="button" aria-expanded="true">Bodie</button>
@@ -85,10 +95,15 @@
           <p id="selectedCarText">Selected car: none</p>
         </div>
 
+        <div class="action-sticky-row">
+          <button id="fixBtn" type="button">Fix Selected</button>
+          <button id="drinkBtn" type="button">Drink Selected</button>
+          <button id="actionPauseBtn" type="button">Pause</button>
+        </div>
+
         <div class="action-group">
           <h3>Beer Select (1,2,3,4)</h3>
           <div id="beerList" class="beer-list" role="radiogroup" aria-label="Beer types"></div>
-          <button id="drinkBtn" type="button">Drink Selected (D)</button>
         </div>
 
         <div class="action-group bodie-group">
@@ -117,7 +132,6 @@
 
         <div class="action-group">
           <h3>Repairs</h3>
-          <button id="fixBtn" type="button">Fix Selected Car (F)</button>
           <button id="cancelRepairBtn" type="button">Cancel Repair</button>
         </div>
 
@@ -178,6 +192,14 @@
       <p id="eventText"></p>
       <p id="eventMeta"></p>
       <button id="eventActionBtn" type="button">Mash!</button>
+    </div>
+  </div>
+
+  <div id="rotateOverlay" class="rotate-overlay" role="dialog" aria-live="assertive" aria-modal="true" aria-hidden="true">
+    <div class="rotate-card">
+      <div class="phone-rotator" aria-hidden="true"><span class="phone"></span></div>
+      <h2>Rotate to Play</h2>
+      <p>Bodie can't wrench in portrait. Rotate your phone.</p>
     </div>
   </div>
 
