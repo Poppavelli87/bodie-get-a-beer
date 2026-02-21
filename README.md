@@ -51,6 +51,12 @@ Bodie Get A Beer is a fast arcade time-management game about balancing wrench wo
 - **Smoke Dab**: bigger score + repair speed boost, higher paranoia risk.
 - **Do A Thing**: random goofy outcomes (great, weird, or terrible).
 
+## Character Visuals
+
+- **Dirt progression (motor oil):** Bodie now tracks persistent run grime (`0..100`) that rises when repairs finish and lightly decays over time. Dirt maps to six visual stages from "clean-ish human" to "sentient oil slick," with stage-crossing gag logs.
+- **Disheveled progression:** Bodie’s hair, eyes, posture tilt/wobble, face flush, shirt tuck, and foam drip react live to intoxication (`BAC`/DrunkMeter). Higher drunkenness levels make him increasingly gremlin-coded.
+- **Repair styles:** Repairs now use style-specific animation sub-modes (`repairing_wrench`, `repairing_pour`, `repairing_hammer`, `repairing_wiring`) selected per car/tier/type. The final 20% of a repair increases animation intensity for dramatic comedic tension.
+
 ## Mobile: Landscape Only
 
 Mobile mode now uses orientation gating + a desktop-like 3-panel landscape layout.
