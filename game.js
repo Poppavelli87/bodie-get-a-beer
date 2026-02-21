@@ -7,7 +7,7 @@
   };
 
   const STEP_MS = 1000 / 60;
-  const MAX_LOG_ENTRIES = 30;
+  const MAX_LOG_ENTRIES = 60;
 
   const TUNING = {
     // === Shift pacing and scoring ===
@@ -230,6 +230,23 @@
     "He no longer casts a shadow, just a slick.",
   ];
 
+
+  const BODIE_DIALOGUE = {
+    stages: {
+      0: { idle:["Shop radio says 72 and sunny. My sockets agree.","One bolt, one breath, one legally reasonable plan.","If we pace this right nobody calls my aunt lawyer.","I can still read torque specs with both eyes.","Coffee is just pre-beer for mechanics.","I trust this wrench exactly medium.","Alignment is therapy for cars and men.","Warranty sticker looked at me first.","Today we are professionals. Mostly.","This floor squeak means luck."], repair:["Gentle torque, civilized outcomes.","Wrench says yes, knuckles say maybe.","Alternator whispered an apology.","We respect threads in this house.","That rattle is now a memory.","OSHA would call this almost compliant.","I fixed it with confidence and two zip ties.","Tires are circles and so is destiny.","This bolt came out because I asked politely.","No hammers needed. I feel mature."], drink:["Hydration by barley begins.","One sip for morale.","Light beer: the responsible rocket fuel.","I call this calibration.","Beer selected with scientific intent.","Carbonation improves diagnostics.","This is preventative maintenance for my soul.","Shop wizardry requires a cold opener.","Sip now, wisdom later.","Foam beard online."] },
+      1: { idle:["Okay now we're loose but employable.","I can hear the tires gossiping.","Who moved the 10mm? Don't answer.","The lift creaks in iambic pentameter.","I'm becoming one with this fan belt.","Mood: medium illegal, high productive.","My handwriting is now cursive lightning.","I winked at a carburetor and it winked back.","Loose shoulders, tight tolerances.","This shop smells like victory and old fries."], repair:["Percussive maybe-maintenance engaged.","That bolt is innocent until proven stripped.","I object to this rust spiritually.","Transmission said no, I said bet.","I tightened until truth emerged.","Two turns past scared is perfect.","Alignment is a social construct but we try.","The muffler has accepted my terms.","I repaired this with jazz timing.","This wiring harness owes me rent."], drink:["Tallboy means we're serious now.","Crack. Sip. Confidence unlocked.","This can has legal advice on it.","I drink for peak diagnostics.","Beer type selected by aura.","This sip tastes like overtime.","Foam said you got this.","Craft IPA has entered the courtroom.","One more sip and I can see horsepower.","Mystery beer? We respect chaos."] },
+      2: { idle:["Conspiracy level: tire shop.","The EPA put a snitch in this O2 sensor.","Warranties are horoscopes for engines.","I think this jack stand is wired.","That alternator is hiding federal secrets.","Camber is just politics for wheels.","Alignment lasers are reading my thoughts.","This invoice has encrypted runes.","The shop cat works for Big Coolant.","I'm not paranoid, I'm torque-aware."], repair:["Objection: this bolt knew what it did.","I prosecute stripped threads with vigor.","This alternator was replaced by actors.","They don't want us to know about free torque.","I present Exhibit A: oily fingerprints.","Jury of sockets finds this nut guilty.","The evidence points to sabotage by cup holders.","Cross-examining this axle in real time.","This wrench is under oath.","Case closed. Engine starts."], drink:["IPA opens the third service eye.","Tallboy testimony accepted.","Beer foams like classified documents.","Mystery can from an unmarked cooler? Perfect.","One sip and I decode check-engine Morse.","I drink to reveal hidden recalls.","This can definitely has surveillance bubbles.","Light beer? plausible deniability.","Sipping for national torque security.","Carbonation witnesses everything."] },
+      3: { idle:["We are in the enlightenment zone.","Engine cycles mirror the human condition.","Spark is desire, compression is discipline.","Every gasket is a boundary.","I am both mechanic and metaphor.","The lift rises, as do we.","A clean idle is inner peace.","Pistons: tiny monks of combustion.","I found meaning in a drain pan.","Time is a torque curve."], repair:["I repair therefore I am.","Tightening this bolt tightens my spirit.","This wrench is a tuning fork for fate.","Oil return is karma.","Belts spin like samsara.","The socket clicks and so does the universe.","We align wheels to align intentions.","This headlight now points toward purpose.","In this bay, entropy pays rent.","I forgive this rust."], drink:["A sip to honor the machine spirit.","Foam crown of temporary wisdom.","This can tastes like transcendence and barley.","Drinking with mindful slouch.","Tallboy as koan.","Craft IPA, teacher of humble burps.","Mystery beer asks no questions.","I sip, therefore we continue.","Carbonation is the sound of now.","Cheers to impermanence and brake pads."] },
+      4: { idle:["WHO STOLE THE TORQUE FROM THIS ROOM??","I AM 73% GREASE 27% LAWYER.","THE FLOOR IS MOVING BUT I'M MOVING BETTER.","OSHA CAN CATCH ME IF THEY CAN.","THE TIRES ARE WHISPERING IN ALL CAPS.","I HAVE BECOME A SHOP WEATHER SYSTEM.","NO ONE TOUCH MY EMOTIONAL RATCHET.","I'M A CREATURE OF OIL NOW.","THIS INVOICE IS A THREAT LETTER.","MY SHADOW LOOKS FLAMMABLE."], repair:["BOLT COURT IS NOW IN SESSION!!!","I SENTENCED THIS NUT TO 40 FT-LBS.","HAMMER OF JUSTICE, GENTLY APPLIED.","THE ALTERNATOR CONFESSED WITHOUT A LAWYER.","THREADS STRIPPED? SO IS MY PATIENCE.","I TORQUED THROUGH THREE DIMENSIONS.","WIRING HARNESS TRIED TO RUN.","I FIXED IT AND YELLED AT PHYSICS.","THIS ENGINE OWES CHILD SUPPORT.","OBJECTION OVERRULED BY WRENCH."], drink:["TALLBOY ACQUIRED. JUDGMENT DECLINED.","MYSTERY BEER TASTES LIKE A DARE.","I DRANK THAT FOR NATIONAL SECURITY.","IPA? MORE LIKE API FOR MY BRAIN.","CARBONATION HAS BECOME A WEAPON.","THIS SIP HAD A BOSS FIGHT.","FOAM EVERYWHERE. VISION OPTIONAL.","I CRACKED A CAN AND REALITY FLINCHED.","LIGHT BEER, HEAVY CONSEQUENCES.","ANOTHER SIP, NO FURTHER QUESTIONS."] },
+      5: { idle:["THE SHOP LIGHTS ARE CONSTELLATIONS.","I CAN HEAR BOLTS PRAYING.","COSMIC TRANSMISSION: BRING ME A 10MM.","MY SOUL JUST MISFIRED.","I AM FLOATING THREE INCHES ABOVE OSHA.","THE ALIGNMENT RACK IS A STAR MAP.","I'M RECEIVING MESSAGES FROM RADIATORS.","TIME IS A CHECK ENGINE LIGHT.","I TASTED INFINITY; IT WAS COOLANT-ADJACENT.","I AM LEGALLY A PHENOMENON."], repair:["I TORQUE BY STARLIGHT.","THIS BOLT EXISTS IN MULTIPLE STATES.","WIRING BECOMES CONSTELLATION.","THE ENGINE STARTED IN ANOTHER TIMELINE.","I REPAIRED THE IDEA OF THIS CAR.","GASKET SEALED ACROSS REALITIES.","HAMMER STRIKE ECHOED THROUGH THE VOID.","I HAVE SPOKEN TO THE ALTERNATOR GOD.","THIS MUFFLER NOW SINGS IN CHOIRS.","WE ARE BEYOND SPEC SHEETS."], drink:["MYSTERY BEER OPENED A PORTAL.","I DRANK THE MILKY WAY LITE.","THIS SIP ARRIVED YESTERDAY.","THE CAN IS EMPTY BUT STILL TALKING.","CARBONATION IS COSMIC BACKGROUND NOISE.","I TOAST THE VOID.","FOAM FORMS SACRED GEOMETRY.","ONE SIP FROM KO OBLIVION.","IPA OF DESTINY ACCEPTED.","LIGHT BEER, DARK PROPHECY."] }
+    },
+    modalities: { philosophical:{lines:["A bolt is just a promise with threads.","Engines teach us: compression before ignition.","Every leak is a boundary asking for care.","We are all torque on borrowed time.","Alignment begins in the heart rack.","Idle smooth, think smooth.","Failure is diagnostics in costume.","A wrench is a tiny philosopher king.","Carburetors are questions with fuel.","Pistons rise and fall like confidence.","Listen to the rattle; it's telling the truth.","I tighten therefore we continue.","Oil changes are acts of forgiveness.","The shop is a temple of second chances.","The manual is only a suggestion of reality."]}, conspiracy:{lines:["Big Alignment made that pothole.","EPA put a tracker in this dipstick.","That warranty is a psyop.","Alternators are listening devices.","This tire wear pattern is a map.","Coolant color codes are a distraction.","The dealership erased the real torque.","Battery terminals are tiny antennas.","Muffler rust was an inside job.","They don't want us rotating tires this often.","The check-engine light blinks in code.","Cabin filter is where the truths hide.","This recall notice came from space.","Who profits from stripped bolts?","I will not be silenced by service intervals."]}, wizard:{lines:["Behold, socketus maximus.","I cast Grease Shield level two.","By the moon of Milwaukee, tighten!","Shop wizardry requires exactly one dramatic sip.","This ratchet is my wand.","Arcane coolant transfer commencing.","Runes indicate a loose serpentine.","I summon the spirit of the 10mm.","Hexes for hex bolts.","The bay is now enchanted.","Mystic torque achieved.","By spark and steel, awaken.","I've prepared a cantrip called hammer.","Wiring sigils are complete.","The hoist obeys the old language."]}, nihilistSmoker:{lines:["Nothing matters, but ash falls evenly.","Entropy always gets paid.","We're all just temporary gaskets.","The smoke knows there is no finish line.","Today's fix is tomorrow's rattle.","I exhale, therefore I cope.","Rust is destiny with texture.","All warranties end. So do we.","The ember understands futility.","I chase peace between coughs.","The universe is a stripped screw.","No gods, no masters, only torque.","Meaning is optional; repairs are not.","Night shift is forever.","Pass me the lighter and the void."]}, dabSage:{lines:["I can see torque in slow motion.","That dab bent spacetime politely.","The socket is speaking fluent jazz.","Color now has horsepower.","I understand this engine emotionally.","Reality got 12% softer.","I just fixed a vibe leak.","My third eye has safety squints.","I can hear piston thoughts.","This bolt is on a spiritual journey.","Timeline split: both cars start.","Dab wisdom: don't trust smooth idles.","I entered the zone; zone said hi.","The wrench left a light trail.","Everything smells like destiny and citrus."]}, angryBolt:{lines:["THIS BOLT IS GUILTY.","I DEMAND MAXIMUM TORQUE.","THREAD COURT IS OPEN.","NO PLEA DEALS FOR RUST.","I WILL CROSS-EXAMINE THIS NUT.","SENTENCED TO TIGHTNESS.","OBJECTION: FLIMSY BRACKET.","THE EVIDENCE IS METALLIC.","JURY OF SOCKETS AGREES.","BAILIFF, HOLD MY BEER.","THIS FASTENER LIED UNDER OATH.","ORDER IN THE BAY.","I PROSECUTE WOBBLE.","CASE LAW: HAMMER V. BOLT.","VERDICT: STARTS FIRST TRY."]}, cosmic:{lines:["TRANSMISSION FROM ORION: CHECK FLUIDS.","THE VOID REQUESTS A TEST DRIVE.","I AM RECEIVING BEEP CODES FROM GOD.","KO IS JUST A LOADING SCREEN.","THE STARS SAY DON'T FLOOR IT.","MY SPINE IS A LIGHTNING HARNESS.","WE ARE ALL SPARK IN A METAL DREAM.","I SEE THE SHOP FROM OUTSIDE TIME.","THE LIFT ASCENDS TO HEAVENLY SPEC.","ANTIFREEZE IS STARDUST JUICE.","I CAN TASTE RADIO WAVES.","THIS BAY FLOATS BETWEEN DIMENSIONS.","THE CHECK ENGINE LIGHT IS A SUN.","SEND HELP OR A TALLBOY.","COSMOS SAYS: TIGHTEN HALF TURN MORE."]} },
+    dirt:{high:["I'm officially shop seasoned.","My shirt is now a historical artifact.","Grease count rising; charisma too.","Oil freckles unlocked.","I squeak when I blink.","I'm one nap away from becoming a mop.","Hands are 80% lubricant.","This is not dirt, this is armor.","I smell like a victorious leak.","Creature mode: warming up."],extreme:["I HAVE BECOME THE OIL.","Do not separate me from the floor pan.","I leave footprints of pure mechanic.","EPA hotline probably ringing.","I am now a sentient spill.","My aura is 5W-30.","I could slide under a car without moving.","The grime has accepted me.","I'm legally a shop cryptid.","If I stand still, cones appear."]},
+    events:{puke:["Containment protocol failed.","The floor has seen too much.","Some fluids are voluntary, some are lore.","I lost an argument with gravity.","Puke event entered the chat.","That was not in the service manual.","Dignity: temporarily out of stock.","Biohazard aura unlocked."],ko:["Tell the bolts I fought bravely.","Temporary shutdown for spiritual reboot.","I blacked out at 120 proof ideas.","Out cold, still iconic.","Body offline, vibes online.","KO delivered by destiny and barley.","I need a nap and a new timeline.","Floor caught me like family."]},
+    beers:{light:["Light beer, light consequences.","Diet chaos selected.","Session fuel loaded.","This one keeps the wrench steady-ish.","A polite little yeasty whisper.","Light beer: plausible competence."],tallboy:["Tallboy: the people's chalice.","Vertical can, horizontal judgment.","Tallboy says commit.","Large format confidence.","One tallboy, two bad ideas.","This can has gravitas."],ipa:["IPA with notes of pine and poor impulse control.","Craft bitterness, artisan chaos.","Hop-powered overconfidence online.","This IPA has opinions.","I can taste expensive mistakes.","Floral nose, feral outcomes."],mystery:["Mystery beer tastes like a side quest.","Unlabeled can, undeniable destiny.","This came from a cooler with secrets.","Mystery beer has chapter select.","I can't identify this but it identifies me.","Could be beer, could be prophecy."]},
+    repairs:{wrench:["Wrench diplomacy in progress.","Torque talks, excuses walk.","Ratchet symphony begins.","Thread whisperer mode.","Socket seated like destiny.","Lefty loosey, righty redemption.","Precision bonk avoided.","This wrench and I have history."],pour:["Mystery fluid application authorized.","Pour first, ask legal later.","Coolant? maybe. confidence? yes.","A measured glug of destiny.","Fluid transfer and emotional support.","This funnel is sacred.","We are lubricating outcomes.","If it drips, it ships."],hammer:["Percussive diplomacy initiated.","Tap tap, mechanical poetry.","Hammer says hurry.","Bonk science activated.","The old ways still work.","Gentle violence, positive outcomes.","Strike true, apologize never.","I fixed it with rhythm."],wiring:["Spicy spaghetti management.","Wiring loom untangled by faith.","Electric whispers becoming useful.","Copper therapy session.","Continuity blessed.","This wire had trust issues.","Voltage negotiations underway.","No sparks means victory."]}
+  };
+
   const state = {
     running: true,
     paused: false,
@@ -271,6 +288,16 @@
       dishevelLevel: 0,
       foamUntil: 0,
       repairIntensity: 0,
+      voice: {
+        stage: 0,
+        modality: null,
+        modalityUntilMs: 0,
+        nextBanterAtMs: 0,
+        nextBigLineAtMs: 0,
+        recentLines: [],
+        lastTrigger: null,
+        flags: { dabActive: false, cigActive: false },
+      },
     },
     logs: [],
     settings: {
@@ -279,6 +306,8 @@
       autoPauseOnPortrait: true,
       mobile3PanelLayout: true,
       leftHanded: false,
+      bodieBanter: true,
+      banterFrequency: "normal",
     },
     rngSeed: 0x43f4b6d1,
     uiPanels: { queueOpen: true, actionOpen: true, logOpen: false, initialized: false },
@@ -322,6 +351,8 @@
     compactModeToggle: document.getElementById("compactModeToggle"),
     mobileLayoutToggle: document.getElementById("mobileLayoutToggle"),
     portraitPauseToggle: document.getElementById("portraitPauseToggle"),
+    banterToggle: document.getElementById("banterToggle"),
+    banterFrequencyToggle: document.getElementById("banterFrequencyToggle"),
     actionPauseBtn: document.getElementById("actionPauseBtn"),
     layoutIndicator: document.getElementById("layoutIndicator"),
     rotateOverlay: document.getElementById("rotateOverlay"),
@@ -765,6 +796,13 @@
       if (reason) {
         addLog(reason);
       }
+      if (nextStage >= 4) {
+        pushBodieLine(pickLine([BODIE_DIALOGUE.dirt.high]), "event");
+      }
+      if (nextStage >= 5) {
+        pushBodieLine(pickLine([BODIE_DIALOGUE.dirt.extreme]), "event");
+      }
+      queueBanter("dirt_stage", 2);
     }
   }
 
@@ -874,10 +912,136 @@
     osc.stop(now + cfg.duration + 0.02);
   }
 
-  function addLog(text) {
-    state.logs.unshift(text);
+  function addLog(text, options = {}) {
+    const entry = {
+      text,
+      source: options.source || "system",
+      kind: options.kind || "normal",
+      stage: Number.isFinite(options.stage) ? options.stage : null,
+    };
+    state.logs.unshift(entry);
     if (state.logs.length > MAX_LOG_ENTRIES) {
       state.logs.length = MAX_LOG_ENTRIES;
+    }
+  }
+
+  function getBanterTiming() {
+    const base = state.settings.banterFrequency === "low" ? { banter: 10500, big: 17000 } : state.settings.banterFrequency === "high" ? { banter: 5200, big: 10500 } : { banter: 7600, big: 13000 };
+    const drunkFactor = clamp((state.drunkMeter - 20) / 90, 0, 1);
+    return {
+      banterMs: Math.max(4000, Math.round(base.banter - drunkFactor * 1800)),
+      bigMs: Math.max(10000, Math.round(base.big - drunkFactor * 1400)),
+    };
+  }
+
+  function computeBodieStage() {
+    const value = Math.max(state.drunkMeter, state.bac * 100);
+    if (value < 25) return 0;
+    if (value < 50) return 1;
+    if (value < 70) return 2;
+    if (value < 85) return 3;
+    if (value < 95) return 4;
+    return 5;
+  }
+
+  function mutateLine(text) {
+    if (state.bodie.voice.stage >= 4 && rand() < 0.25) return `${text.toUpperCase()}${rand() < 0.4 ? "!!" : "!"}`;
+    if (state.bodie.voice.stage >= 3 && rand() < 0.2) return `${text}${rand() < 0.5 ? "..." : "?!"}`;
+    return text;
+  }
+
+  function pickLine(pools) {
+    const voice = state.bodie.voice;
+    const all = pools.flat().filter(Boolean);
+    if (!all.length) return null;
+    const filtered = all.filter((line) => !voice.recentLines.includes(line));
+    const pickPool = filtered.length ? filtered : all;
+    return pick(pickPool);
+  }
+
+  function pushBodieLine(text, kind = "banter") {
+    if (!state.settings.bodieBanter || !text) return;
+    const finalText = `Bodie: ${mutateLine(text)}`;
+    addLog(finalText, { source: "bodie", kind, stage: state.bodie.voice.stage });
+    state.bodie.voice.recentLines.unshift(text);
+    if (state.bodie.voice.recentLines.length > 20) state.bodie.voice.recentLines.length = 20;
+  }
+
+  function maybeShiftModality(nowMs) {
+    const voice = state.bodie.voice;
+    if (voice.modality && nowMs < voice.modalityUntilMs) return;
+    if (voice.modality && nowMs >= voice.modalityUntilMs) voice.modality = null;
+    const weights = [];
+    if (voice.stage >= 3) weights.push(["philosophical", 2 + state.streakTier * 0.4]);
+    if (voice.stage >= 2) weights.push(["conspiracy", 2 + state.bodie.dishevelLevel * 0.5]);
+    if (voice.stage >= 1 && state.currentAction?.type === "repair") weights.push(["wizard", 1.8]);
+    if (voice.flags.cigActive) weights.push(["nihilistSmoker", 3.3]);
+    if (voice.flags.dabActive) weights.push(["dabSage", 3.5]);
+    if (voice.lastTrigger === "finish_repair" || voice.lastTrigger === "cancel_repair") weights.push(["angryBolt", 2.7]);
+    if (voice.stage >= 5 || state.event?.type === "ko" || state.bac > 1.35) weights.push(["cosmic", 5]);
+    if (!weights.length || rand() > 0.22) return;
+    const picked = weightedPick(weights, (w) => w[1])[0];
+    voice.modality = picked;
+    voice.modalityUntilMs = nowMs + randInt(10000, 30000);
+  }
+
+  function queueBanter(trigger, intensity = 1) {
+    const voice = state.bodie.voice;
+    voice.lastTrigger = trigger;
+    if (!state.settings.bodieBanter) return;
+    const nowMs = state.timeMs;
+    const timing = getBanterTiming();
+    voice.nextBanterAtMs = Math.min(voice.nextBanterAtMs || nowMs, nowMs + Math.max(4000, Math.floor(timing.banterMs * (1 - intensity * 0.06))));
+    if (voice.stage >= 2) voice.nextBigLineAtMs = Math.min(voice.nextBigLineAtMs || nowMs, nowMs + Math.max(10000, Math.floor(timing.bigMs * (1 - intensity * 0.05))));
+  }
+
+  function getTriggerPools(trigger) {
+    const stage = state.bodie.voice.stage;
+    const stageSet = BODIE_DIALOGUE.stages[stage] || BODIE_DIALOGUE.stages[0];
+    const pools = [stageSet.idle];
+    if (trigger.includes("repair")) pools.push(stageSet.repair);
+    if (trigger.includes("drink")) pools.push(stageSet.drink);
+    if (trigger === "puke_start" || trigger === "puke_fail" || trigger === "puke_success") pools.push(BODIE_DIALOGUE.events.puke);
+    if (trigger === "ko") pools.push(BODIE_DIALOGUE.events.ko);
+    if (state.bodie.dirt >= 70) pools.push(BODIE_DIALOGUE.dirt.high);
+    if (state.bodie.dirt >= 88) pools.push(BODIE_DIALOGUE.dirt.extreme);
+    if (trigger === "finish_drink") {
+      const id = DRINKS[state.selectedBeerIndex]?.id;
+      if (id === "craftipa") pools.push(BODIE_DIALOGUE.beers.ipa);
+      else pools.push(BODIE_DIALOGUE.beers[id] || BODIE_DIALOGUE.beers.light);
+    }
+    const selected = findSelectedCar?.();
+    if (selected?.repairStyle) {
+      const style = selected.repairStyle.replace("repairing_", "");
+      if (BODIE_DIALOGUE.repairs[style]) pools.push(BODIE_DIALOGUE.repairs[style]);
+    }
+    if (state.bodie.voice.modality && BODIE_DIALOGUE.modalities[state.bodie.voice.modality]) {
+      pools.push(BODIE_DIALOGUE.modalities[state.bodie.voice.modality].lines);
+    }
+    return pools;
+  }
+
+  function updateBodieVoice(nowMs, dtMs) {
+    const voice = state.bodie.voice;
+    voice.stage = computeBodieStage();
+    voice.flags.dabActive = state.effects.dabRushMs > 0;
+    voice.flags.cigActive = state.effects.steadyHandsMs > 0;
+    maybeShiftModality(nowMs);
+    if (!state.settings.bodieBanter || state.event) return;
+    if (!voice.nextBanterAtMs) {
+      const t = getBanterTiming();
+      voice.nextBanterAtMs = nowMs + t.banterMs;
+      voice.nextBigLineAtMs = nowMs + t.bigMs;
+    }
+    if (nowMs >= voice.nextBanterAtMs) {
+      const line = pickLine(getTriggerPools(voice.lastTrigger || "idle"));
+      pushBodieLine(line, "banter");
+      voice.nextBanterAtMs = nowMs + getBanterTiming().banterMs;
+    }
+    if (voice.stage >= 2 && nowMs >= voice.nextBigLineAtMs) {
+      const line = pickLine(getTriggerPools("big"));
+      pushBodieLine(line, "big");
+      voice.nextBigLineAtMs = nowMs + getBanterTiming().bigMs;
     }
   }
 
@@ -900,6 +1064,12 @@
       }
       if (typeof parsed.leftHanded === "boolean") {
         state.settings.leftHanded = parsed.leftHanded;
+      }
+      if (typeof parsed.bodieBanter === "boolean") {
+        state.settings.bodieBanter = parsed.bodieBanter;
+      }
+      if (["low", "normal", "high"].includes(parsed.banterFrequency)) {
+        state.settings.banterFrequency = parsed.banterFrequency;
       }
     } catch (_) {
       state.settings.soundOn = true;
@@ -1007,6 +1177,15 @@
     state.bodie.dishevelLevel = 0;
     state.bodie.foamUntil = 0;
     state.bodie.repairIntensity = 0;
+    state.bodie.voice.stage = computeBodieStage();
+    state.bodie.voice.modality = null;
+    state.bodie.voice.modalityUntilMs = 0;
+    state.bodie.voice.nextBanterAtMs = 0;
+    state.bodie.voice.nextBigLineAtMs = 0;
+    state.bodie.voice.recentLines = [];
+    state.bodie.voice.lastTrigger = null;
+    state.bodie.voice.flags.dabActive = false;
+    state.bodie.voice.flags.cigActive = false;
     lastQueueSignature = "";
     lastLogSignature = "";
 
@@ -1043,6 +1222,7 @@
     };
     playTone("start");
     addLog(payload.logText);
+    queueBanter(`start_${payload.type}`, 1);
     return true;
   }
 
@@ -1050,6 +1230,7 @@
     const car = findSelectedCar();
     if (!car) {
       addLog("No car selected. Bodie argues with a toolbox instead.");
+      queueBanter("start_repair", 1);
       return;
     }
     const remaining = Math.max(600, Math.floor(car.remainingRepairMs));
@@ -1088,6 +1269,7 @@
         car.repairTimeMs
       );
       addLog(`Repair canceled. ${Math.round((kept / car.repairTimeMs) * 100)}% progress survived.`);
+      queueBanter("cancel_repair", 2);
     }
     state.currentAction = null;
     state.bodie.repairIntensity = 0;
@@ -1153,6 +1335,7 @@
       `Fixed ${car.name}: +${points} (${multiplier.toFixed(1)}x drunk x ${streakBonus.toFixed(2)} streak).`
     );
     addLog(`Motor oil everywhere. Dirt +${dirtGain}.`);
+    queueBanter("finish_repair", 2);
     playTone("complete");
   }
 
@@ -1168,6 +1351,7 @@
       addLog(`${beer.name} hits. +${beer.bacGain.toFixed(2)} BAC, +${beer.risk}% PukeRisk.`);
     }
     playTone("complete");
+    queueBanter("finish_drink", 2);
   }
 
   function finishCigarette() {
@@ -1179,8 +1363,10 @@
       state.pukeRisk = clamp(state.pukeRisk + 10, 0, TUNING.PUKERISK_MAX);
       state.timeMs += 1300;
       addLog("The cigarette backfires into a cough attack. Time evaporates.");
+      queueBanter("cig", 2);
     } else {
       addLog("Nicotine serenity: drain slowed and Bodie feels suspiciously focused.");
+      queueBanter("cig", 1);
     }
     updateHighScoreIfNeeded();
     playTone("complete");
@@ -1195,8 +1381,10 @@
       state.timeMs += 2100;
       state.pukeRisk = clamp(state.pukeRisk + 14, 0, TUNING.PUKERISK_MAX);
       addLog("Dab paranoia. Bodie inspects one bolt for way too long.");
+      queueBanter("dab", 3);
     } else {
       addLog("Dab rush active: repair speed boosted for a short window.");
+      queueBanter("dab", 2);
     }
     updateHighScoreIfNeeded();
     playTone("complete");
@@ -1249,6 +1437,7 @@
           if (!car) {
             state.score += 100;
             addLog("Bodie does a thing. Nobody knows why. +100 points anyway.");
+            queueBanter("thing", 2);
             return;
           }
           car.remainingRepairMs = Math.max(500, car.remainingRepairMs * 0.45);
@@ -1259,6 +1448,7 @@
 
     const chosen = weightedPick(outcomes, (entry) => entry.weight);
     chosen.apply();
+    queueBanter("thing", 2);
     updateHighScoreIfNeeded();
     playTone("complete");
   }
@@ -1317,6 +1507,7 @@
     setBodieOverlay("puke", 1400);
     addDirt(randInt(2, 5));
     addLog("Puke warning! Mash to hold it together.");
+    queueBanter("puke_start", 3);
     playTone("warn");
   }
 
@@ -1327,6 +1518,7 @@
       removeBac(0.16);
       state.pukeRisk = clamp(state.pukeRisk - 55, 0, TUNING.PUKERISK_MAX);
       addLog("Crisis managed. Minor dignity loss.");
+      queueBanter("puke_success", 2);
       playTone("complete");
     } else {
       state.score = Math.max(0, state.score - 180);
@@ -1345,6 +1537,7 @@
       }
       addDirt(randInt(4, 8), "Embarrassment residue added.");
       addLog("Catastrophic puke. Massive delay.");
+      queueBanter("puke_fail", 3);
       setBodieMode("puke", 2400, ["The floor did not deserve this."]);
       setBodieOverlay("puke", 1800);
       playTone("puke");
@@ -1375,6 +1568,7 @@
     addDirt(randInt(5, 9), "KO nap in a puddle. Extra grime acquired.");
     setBodieMode("ko", TUNING.KO_WAKE_DELAY_MS + 800, ["Tell my sockets I love them."]);
     addLog("Bodie hits the floor. Lights out.");
+    queueBanter("ko", 4);
     playTone("ko");
   }
 
@@ -1425,12 +1619,16 @@
   function updateStreak(stepMs) {
     const inSweetSpot =
       state.drunkMeter >= TUNING.SWEET_SPOT_MIN && state.drunkMeter <= TUNING.SWEET_SPOT_MAX;
+    const prevTier = state.streakTier;
     if (inSweetSpot) {
       state.streakMs += stepMs;
       state.streakTier = Math.floor(state.streakMs / TUNING.STREAK_STEP_MS);
+      queueBanter("streak_tick", 0.5);
+      if (state.streakTier > prevTier) queueBanter("streak_milestone", 2);
     } else if (state.streakMs > 0) {
       state.streakMs = 0;
       state.streakTier = 0;
+      queueBanter("streak_break", 1);
     }
   }
 
@@ -1461,6 +1659,7 @@
       }
       if (car.patienceMs <= 0) {
         addLog(`${car.name} customer rage-quits and drives away smoking.`);
+        queueBanter("streak_break", 1);
         continue;
       }
       keep.push(car);
@@ -1605,6 +1804,7 @@
     state.pukeCooldownMs = Math.max(0, state.pukeCooldownMs - stepMs);
 
     updateStreak(stepMs);
+    updateBodieVoice(state.timeMs, stepMs);
     updateAction(stepMs);
     updateQueue(stepMs);
 
@@ -1637,6 +1837,7 @@
     state.selectedBeerIndex = clamp(index, 0, DRINKS.length - 1);
     if (!quiet) {
       addLog(`Selected beer: ${DRINKS[state.selectedBeerIndex].name}.`);
+      queueBanter("start_drink", 1);
     }
   }
 
@@ -1662,6 +1863,7 @@
     }
     state.paused = !state.paused;
     addLog(state.paused ? "Paused." : "Back to work.");
+    queueBanter(state.paused ? "streak_break" : "streak_start", 1);
   }
 
   function onKeyDown(event) {
@@ -1787,6 +1989,18 @@
       detectLayout();
     });
 
+    ui.banterToggle.addEventListener("click", () => {
+      state.settings.bodieBanter = !state.settings.bodieBanter;
+      saveSettings();
+    });
+
+    ui.banterFrequencyToggle.addEventListener("click", () => {
+      const order = ["low", "normal", "high"];
+      const idx = order.indexOf(state.settings.banterFrequency);
+      state.settings.banterFrequency = order[(idx + 1) % order.length];
+      saveSettings();
+    });
+
     tapAndRun(ui.drinkBtn, startDrink);
     tapAndRun(ui.fixBtn, startRepair);
     tapAndRun(ui.cancelRepairBtn, cancelRepair);
@@ -1819,6 +2033,7 @@
       const id = Number(target.dataset.carId);
       if (!Number.isFinite(id)) return;
       state.selectedCarId = id;
+      queueBanter("car_selected", 1);
     };
     ui.carQueue.addEventListener("click", onCarTap);
     ui.mobileCarQuickSelect.addEventListener("click", onCarTap);
@@ -2000,9 +2215,20 @@
   }
 
   function renderLogs() {
-    const signature = state.logs.join("|");
+    const signature = state.logs.map((entry) => `${entry.source}:${entry.kind}:${entry.stage}:${entry.text}`).join("|");
     if (signature === lastLogSignature) return;
-    ui.logFeed.innerHTML = state.logs.map((line) => `<li><em>${line}</em></li>`).join("");
+    ui.logFeed.innerHTML = state.logs
+      .map((entry) => {
+        const classes = ["log-line"];
+        if (entry.source === "bodie") {
+          classes.push("bodie");
+          if (Number.isFinite(entry.stage)) {
+            classes.push(`stage-${entry.stage}`);
+          }
+        }
+        return `<li class="${classes.join(" ")}"><em>${entry.text}</em></li>`;
+      })
+      .join("");
     lastLogSignature = signature;
   }
 
@@ -2115,6 +2341,11 @@
     ui.leftHandToggle.setAttribute("aria-pressed", String(touchState.leftHanded));
     ui.portraitPauseToggle.textContent = `Auto-pause portrait: ${state.settings.autoPauseOnPortrait ? "On" : "Off"}`;
     ui.portraitPauseToggle.setAttribute("aria-pressed", String(state.settings.autoPauseOnPortrait));
+    ui.banterToggle.textContent = `Bodie Banter: ${state.settings.bodieBanter ? "On" : "Off"}`;
+    ui.banterToggle.setAttribute("aria-pressed", String(state.settings.bodieBanter));
+    const freqLabel = state.settings.banterFrequency.charAt(0).toUpperCase() + state.settings.banterFrequency.slice(1);
+    ui.banterFrequencyToggle.textContent = `Banter Frequency: ${freqLabel}`;
+    ui.banterFrequencyToggle.setAttribute("aria-pressed", String(state.settings.banterFrequency === "high"));
     ui.actionPauseBtn.textContent = state.paused ? "Resume" : "Pause";
   }
 
@@ -2286,7 +2517,7 @@
         repair_remaining_ms: Math.round(car.remainingRepairMs),
         patience_remaining_ms: Math.round(car.patienceMs),
       })),
-      recent_logs: state.logs.slice(0, 6),
+      recent_logs: state.logs.slice(0, 6).map((entry) => entry.text),
     };
     return JSON.stringify(payload, null, 2);
   }

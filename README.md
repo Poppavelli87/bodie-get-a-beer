@@ -9,6 +9,31 @@ Bodie Get A Beer is a fast arcade time-management game about balancing wrench wo
 - Added a flow pacing perk for keeping DrunkMeter in the 70-85 zone: it builds momentum for better repair speed and streak value.
 - Added an animated **Bodie Stage** panel with state-driven action animations (idle, repair, drink, cigarette, dab, puke, KO) plus rotating comedic captions.
 
+
+## Drunk Mind Engine (v1.2)
+
+Bodie now has a structured voice system that reacts to run state in real time:
+
+- **Voice stage (0-5)** tracks intoxication and escalates from loose mechanic banter to cosmic nonsense.
+- **Short-lived modalities** can temporarily take over (10-30s), including:
+  - Philosophical Mechanic
+  - Conspiracy Gremlin
+  - Shop Wizard
+  - Nihilist Smoker
+  - Dab Time Sage
+  - Angry Bolt Prosecutor
+  - Cosmic Transmission (near KO)
+- **Context-driven banter triggers** fire on repairs, drinks, cigs/dabs, puke/KO events, streak changes, and car selection.
+- **Anti-spam guardrails**:
+  - regular banter obeys cooldowns with a hard floor of 4 seconds
+  - “big” lines are limited to roughly every 10-15 seconds
+  - recent-line history prevents repetitive loops
+- **Settings**:
+  - `Bodie Banter` On/Off (default On)
+  - `Banter Frequency` Low / Normal / High (default Normal)
+
+Log styling now adds subtle stage-based text effects for Bodie lines (mild jitter at high stages and slight glow near cosmic stage) while preserving readability.
+
 ## How To Run
 
 1. Open `index.html` in any modern browser.
@@ -108,7 +133,7 @@ Stored in `localStorage`:
 
 - High score
 - Sound setting
-- UI settings (compact mode + auto-pause portrait)
+- UI settings (compact mode + auto-pause portrait + banter toggles)
 
 ## Design Notes
 
