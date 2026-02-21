@@ -51,30 +51,31 @@ Bodie Get A Beer is a fast arcade time-management game about balancing wrench wo
 - **Smoke Dab**: bigger score + repair speed boost, higher paranoia risk.
 - **Do A Thing**: random goofy outcomes (great, weird, or terrible).
 
-## Mobile Play
+## Mobile: Landscape Only
 
-Mobile optimization now auto-detects touch + small-screen form factors with no setup:
+Mobile mode now uses orientation gating + a desktop-like 3-panel landscape layout.
 
-- **Adaptive layouts**
-  - Desktop (`>=900px`): original multi-panel setup.
-  - Mobile portrait: stacked single-column panels with collapsible Queue/Bodie/Log and a default-collapsed log.
-  - Mobile landscape: two-column split with queue/log on the left and actions/Bodie on the right.
-- **Fixed Action Dock (mobile only)**
-  - Always-visible actions: Drink, Fix, Cig, Dab, Thing, Pause.
-  - Segmented beer picker (Light/Tallboy/IPA/Mystery).
-  - Selected car indicator + quick select buttons for top queue cars.
-- **Touch-first behavior**
-  - Minimum 44px tap targets.
-  - Touch-action tuned to reduce accidental zoom/scroll during gameplay.
-  - iOS/WebAudio unlock on first interaction.
-- **Performance and comfort**
-  - Log capped to latest 30 lines.
-  - Queue rendering is DOM-cached and only updates when queue state changes.
-  - Auto-pause via Page Visibility API when tab goes background.
-  - Reduced-motion support and lower visual effect strength on mobile.
-- **Compact Mode setting**
-  - Header toggle cycles `Auto -> On -> Off` and stores preference in `localStorage`.
-  - Auto mode enables compact UI on small screens.
+- **Mobile detection (no UA sniffing)**
+  - A device is treated as mobile when touch-capable **and** the smaller viewport dimension is `< 800px`.
+- **Portrait is blocked**
+  - Portrait shows a full-screen **Rotate to Play** overlay with animated CSS phone icon.
+  - Gameplay input is blocked in portrait.
+  - Optional setting: **Auto-pause portrait** (default ON, saved in `localStorage`).
+  - With auto-pause ON, game pauses in portrait and resumes on landscape without reset.
+  - With auto-pause OFF, portrait still blocks input, but pause state is not forced.
+- **Landscape 3-panel layout (mobileLandscape3)**
+  - Compact HUD row on top.
+  - 3 columns below:
+    1. **Queue** (left, internal vertical scroll)
+    2. **Bodie Stage + Now Doing + progress** (center, visual focus)
+    3. **Actions + Beer + Bonus + compact Log** (right, internal vertical scroll)
+  - Sticky primary action row in right panel: **Fix Selected / Drink Selected / Pause**.
+  - Tap targets keep a minimum `44px` height.
+  - Uses safe-area insets for notches (`env(safe-area-inset-*)`).
+- **Touch + performance tweaks**
+  - `touch-action: none` on game shell in mobile landscape to prevent accidental page scrolling.
+  - Queue/log keep `touch-action: pan-y` for internal scroll.
+  - Mobile visual effects are reduced for smoother play.
 
 ## Controls
 
@@ -101,6 +102,7 @@ Stored in `localStorage`:
 
 - High score
 - Sound setting
+- UI settings (compact mode + auto-pause portrait)
 
 ## Design Notes
 
