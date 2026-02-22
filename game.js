@@ -4,6 +4,8 @@
   const STORAGE_KEYS = {
     highScore: "bodie_get_a_beer_high_score",
     settings: "bodie_get_a_beer_settings",
+    highscores: "bodie_highscores_v1",
+    playerName: "bodie_player_name",
   };
 
   const STEP_MS = 1000 / 60;
@@ -265,6 +267,7 @@
     flow: 0,
     streakMs: 0,
     streakTier: 0,
+    streakBestSeconds: 0,
     selectedBeerIndex: 0,
     selectedCarId: null,
     carQueue: [],
@@ -300,6 +303,12 @@
       },
     },
     logs: [],
+    highScores: [],
+    lastEnteredName: "",
+    results: null,
+    pendingHighScoreEntry: null,
+    activeModal: null,
+    toastTimeout: 0,
     settings: {
       soundOn: true,
       compactMode: "auto",
@@ -393,6 +402,7 @@
     mobileHeartsHud: document.getElementById("mobileHeartsHud"),
     mobileBaconHud: document.getElementById("mobileBaconHud"),
     mobileLevelHud: document.getElementById("mobileLevelHud"),
+
     gearMenuBtn: document.getElementById("gearMenuBtn"),
     gearMenu: document.getElementById("gearMenu"),
     debugToggle: document.getElementById("debugToggle"),
@@ -402,6 +412,27 @@
     microMult: document.getElementById("microMult"),
     statsRow: document.getElementById("statsRow"),
     logExpandToggle: document.getElementById("logExpandToggle"),
+    openHighScoresBtn: document.getElementById("openHighScoresBtn"),
+    shareBanner: document.getElementById("shareBanner"),
+    shareBannerText: document.getElementById("shareBannerText"),
+    shareBannerClose: document.getElementById("shareBannerClose"),
+    resultsModal: document.getElementById("resultsModal"),
+    resultsCloseBtn: document.getElementById("resultsCloseBtn"),
+    resultsSummary: document.getElementById("resultsSummary"),
+    resultsFunnyLine: document.getElementById("resultsFunnyLine"),
+    resultsPlayAgainBtn: document.getElementById("resultsPlayAgainBtn"),
+    resultsHighScoresBtn: document.getElementById("resultsHighScoresBtn"),
+    resultsShareBtn: document.getElementById("resultsShareBtn"),
+    highScoresModal: document.getElementById("highScoresModal"),
+    highScoresCloseBtn: document.getElementById("highScoresCloseBtn"),
+    highScoresBody: document.getElementById("highScoresBody"),
+    resetHighScoresBtn: document.getElementById("resetHighScoresBtn"),
+    newHighScoreModal: document.getElementById("newHighScoreModal"),
+    newHighScoreCloseBtn: document.getElementById("newHighScoreCloseBtn"),
+    highScoreNameInput: document.getElementById("highScoreNameInput"),
+    highScoreNameError: document.getElementById("highScoreNameError"),
+    saveHighScoreBtn: document.getElementById("saveHighScoreBtn"),
+    toast: document.getElementById("toast"),
   };
 
   let currentLayout = "desktop";
@@ -948,6 +979,185 @@
     }
   }
 
+  function getBodieFunnyLine() {
+    const lines = state.logs.filter((entry) => entry.source === "bodie" && (entry.kind === "big" || entry.kind === "event"));
+    if (lines.length) return lines[0].text;
+    const anyBodie = state.logs.find((entry) => entry.source === "bodie");
+    return anyBodie ? anyBodie.text : "Bodie: Torque first, explanations never.";
+  }
+
+  function getModeLabel() {
+    return "Classic Shift";
+  }
+
+  function bestStreakSeconds() {
+    return Math.max(state.streakBestSeconds || 0, Math.floor(state.streakMs / 1000));
+  }
+
+  function formatDateShort(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString();
+  }
+
+  function normalizeHighScores(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((entry) => ({
+        name: typeof entry?.name === "string" ? entry.name.trim().slice(0, 12) : "BODIE",
+        score: Math.max(0, Math.floor(Number(entry?.score) || 0)),
+        dateISO: typeof entry?.dateISO === "string" ? entry.dateISO : new Date().toISOString(),
+        streakBest: Math.max(0, Math.floor(Number(entry?.streakBest) || 0)),
+        modeLabel: typeof entry?.modeLabel === "string" && entry.modeLabel ? entry.modeLabel : "Classic Shift",
+      }))
+      .filter((entry) => entry.name.length >= 3)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+  }
+
+  function saveHighScoreList() {
+    localStorage.setItem(STORAGE_KEYS.highscores, JSON.stringify(state.highScores));
+  }
+
+  function renderHighScoresTable() {
+    if (!ui.highScoresBody) return;
+    if (!state.highScores.length) {
+      ui.highScoresBody.innerHTML = '<tr><td colspan="5">No scores yet. Make Bodie proud.</td></tr>';
+      return;
+    }
+    ui.highScoresBody.innerHTML = state.highScores
+      .map((entry, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${entry.name}</td>
+          <td>${entry.score}</td>
+          <td>${entry.streakBest}s</td>
+          <td>${formatDateShort(entry.dateISO)}</td>
+        </tr>
+      `)
+      .join("");
+  }
+
+  function openModal(name) {
+    const all = [ui.resultsModal, ui.highScoresModal, ui.newHighScoreModal];
+    all.forEach((m) => m && m.classList.add("hidden"));
+    state.activeModal = name || null;
+    if (!name) return;
+    const target = name === "results" ? ui.resultsModal : name === "highscores" ? ui.highScoresModal : ui.newHighScoreModal;
+    if (target) target.classList.remove("hidden");
+  }
+
+  function closeAllModals() {
+    openModal(null);
+  }
+
+  function showToast(message) {
+    if (!ui.toast) return;
+    ui.toast.textContent = message;
+    ui.toast.classList.remove("hidden");
+    if (state.toastTimeout) clearTimeout(state.toastTimeout);
+    state.toastTimeout = setTimeout(() => ui.toast.classList.add("hidden"), 2200);
+  }
+
+  function sanitizePlayerName(name) {
+    const trimmed = String(name || "").trim().replace(/\s+/g, " ");
+    if (!/^[A-Za-z0-9 ]{3,12}$/.test(trimmed)) return null;
+    return trimmed;
+  }
+
+  function maybeOpenHighScoreEntry() {
+    const qualifies = state.highScores.length < 10 || state.score > state.highScores[state.highScores.length - 1].score;
+    if (!qualifies) return;
+    state.pendingHighScoreEntry = {
+      score: state.score,
+      streakBest: bestStreakSeconds(),
+      modeLabel: getModeLabel(),
+      dateISO: new Date().toISOString(),
+    };
+    ui.highScoreNameInput.value = state.lastEnteredName || "";
+    ui.highScoreNameError.textContent = "";
+    openModal("newHighScore");
+    ui.highScoreNameInput.focus();
+  }
+
+  function savePendingHighScore() {
+    if (!state.pendingHighScoreEntry) return;
+    const name = sanitizePlayerName(ui.highScoreNameInput.value);
+    if (!name) {
+      ui.highScoreNameError.textContent = "Use 3-12 letters, numbers, or spaces.";
+      return;
+    }
+    state.lastEnteredName = name;
+    localStorage.setItem(STORAGE_KEYS.playerName, name);
+    state.highScores.push({ ...state.pendingHighScoreEntry, name });
+    state.highScores = normalizeHighScores(state.highScores);
+    saveHighScoreList();
+    state.pendingHighScoreEntry = null;
+    renderHighScoresTable();
+    openModal("results");
+    showToast("High score saved.");
+  }
+
+  function buildResults() {
+    const drunkStage = computeBodieStage();
+    const dirtStage = getDirtStage(state.bodie.dirt);
+    return {
+      score: state.score,
+      streakBest: bestStreakSeconds(),
+      drunkStage,
+      dirtStage,
+      funnyLine: getBodieFunnyLine(),
+    };
+  }
+
+  function renderResultsModal() {
+    if (!state.results || !ui.resultsSummary) return;
+    ui.resultsSummary.innerHTML = `
+      <div class="results-item"><strong>Final score</strong>${state.results.score}</div>
+      <div class="results-item"><strong>Best streak</strong>${state.results.streakBest}s</div>
+      <div class="results-item"><strong>Drunk stage</strong>${state.results.drunkStage}</div>
+      <div class="results-item"><strong>Dirt stage</strong>${DIRT_STAGE_LABELS[state.results.dirtStage]}</div>
+    `;
+    ui.resultsFunnyLine.textContent = state.results.funnyLine;
+  }
+
+  function buildSharePayload() {
+    const url = new URL(window.location.href);
+    const displayName = state.lastEnteredName || "BODIE";
+    url.searchParams.set("share", "1");
+    url.searchParams.set("score", String(state.results?.score || state.score));
+    url.searchParams.set("name", displayName.toUpperCase());
+    const text = `I scored ${state.results?.score || state.score} in Bodie Get A Beer. Best streak: ${state.results?.streakBest || bestStreakSeconds()}s. ${state.results?.funnyLine || getBodieFunnyLine()} Play: ${url.toString()}`;
+    return { title: "Bodie Get A Beer", text, url: url.toString() };
+  }
+
+  async function shareScore() {
+    const payload = buildSharePayload();
+    if (navigator.share) {
+      try {
+        await navigator.share(payload);
+        return;
+      } catch (_) {}
+    }
+    const copyText = payload.text;
+    try {
+      await navigator.clipboard.writeText(copyText);
+      showToast("Copied. Paste into Facebook/Messenger/Discord.");
+    } catch (_) {
+      showToast("Copy failed. Select and copy manually.");
+    }
+  }
+
+  function handleShareBannerFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("share") !== "1") return;
+    const score = Math.max(0, Math.floor(Number(params.get("score") || 0)));
+    const nameRaw = (params.get("name") || "Someone").slice(0, 24);
+    const name = nameRaw.replace(/[^A-Za-z0-9 ]/g, "").trim() || "Someone";
+    ui.shareBannerText.textContent = `${name} scored ${score}. Can you beat it?`;
+    ui.shareBanner.classList.remove("hidden");
+  }
+
   function getBanterTiming() {
     const base = state.settings.banterFrequency === "low" ? { banter: 10500, big: 17000 } : state.settings.banterFrequency === "high" ? { banter: 5200, big: 10500 } : { banter: 7600, big: 13000 };
     const drunkFactor = clamp((state.drunkMeter - 20) / 90, 0, 1);
@@ -1071,6 +1281,13 @@
   function loadStorage() {
     const parsedHigh = Number(localStorage.getItem(STORAGE_KEYS.highScore) || "0");
     state.highScore = Number.isFinite(parsedHigh) ? Math.max(0, Math.floor(parsedHigh)) : 0;
+    state.lastEnteredName = String(localStorage.getItem(STORAGE_KEYS.playerName) || "").slice(0, 12);
+    try {
+      const scores = JSON.parse(localStorage.getItem(STORAGE_KEYS.highscores) || "[]");
+      state.highScores = normalizeHighScores(scores);
+    } catch (_) {
+      state.highScores = [];
+    }
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || "{}");
       if (typeof parsed.soundOn === "boolean") {
@@ -1184,6 +1401,9 @@
     state.spawnTimerMs = 0;
     state.currentAction = null;
     state.event = null;
+    state.results = null;
+    state.pendingHighScoreEntry = null;
+    closeAllModals();
     state.effects.steadyHandsMs = 0;
     state.effects.dabRushMs = 0;
     state.effects.mysteryRushMs = 0;
@@ -1620,7 +1840,11 @@
     state.currentAction = null;
     state.event = null;
     updateHighScoreIfNeeded();
+    state.results = buildResults();
+    renderResultsModal();
     addLog(`Shift over. Final score: ${state.score}.`);
+    openModal("results");
+    maybeOpenHighScoreEntry();
   }
 
   function updateEffects(stepMs) {
@@ -1646,6 +1870,7 @@
     if (inSweetSpot) {
       state.streakMs += stepMs;
       state.streakTier = Math.floor(state.streakMs / TUNING.STREAK_STEP_MS);
+      state.streakBestSeconds = Math.max(state.streakBestSeconds, Math.floor(state.streakMs / 1000));
       queueBanter("streak_tick", 0.5);
       if (state.streakTier > prevTier) queueBanter("streak_milestone", 2);
     } else if (state.streakMs > 0) {
@@ -1911,9 +2136,20 @@
       "enter",
       " ",
       "a",
+      "escape",
     ]);
     if (handled.has(key)) {
       event.preventDefault();
+    }
+    if (key === "escape") {
+      if (state.activeModal) {
+        if (state.pendingHighScoreEntry && state.activeModal === "newHighScore") {
+          openModal("results");
+        } else {
+          closeAllModals();
+        }
+      }
+      return;
     }
 
     if (isPortraitBlockedLayout()) {
@@ -2005,6 +2241,10 @@
 
     tapAndRun(ui.pauseBtn, togglePause);
     tapAndRun(ui.resetBtn, () => resetRun(false));
+    tapAndRun(ui.openHighScoresBtn, () => {
+      renderHighScoresTable();
+      openModal("highscores");
+    });
     ui.soundToggle.addEventListener("click", () => {
       state.settings.soundOn = !state.settings.soundOn;
       if (state.settings.soundOn) {
@@ -2096,6 +2336,39 @@
         state.paused = false;
       }
     });
+
+    ui.resultsPlayAgainBtn.addEventListener("click", () => resetRun(false));
+    ui.resultsHighScoresBtn.addEventListener("click", () => {
+      renderHighScoresTable();
+      openModal("highscores");
+    });
+    ui.resultsShareBtn.addEventListener("click", () => {
+      shareScore();
+    });
+    ui.resultsCloseBtn.addEventListener("click", closeAllModals);
+    ui.highScoresCloseBtn.addEventListener("click", closeAllModals);
+    ui.newHighScoreCloseBtn.addEventListener("click", () => {
+      if (state.pendingHighScoreEntry) {
+        openModal("results");
+      } else {
+        closeAllModals();
+      }
+    });
+    ui.saveHighScoreBtn.addEventListener("click", savePendingHighScore);
+    ui.highScoreNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        savePendingHighScore();
+      }
+    });
+    ui.resetHighScoresBtn.addEventListener("click", () => {
+      if (!confirm("Reset all local high scores?")) return;
+      state.highScores = [];
+      saveHighScoreList();
+      renderHighScoresTable();
+      showToast("High scores reset.");
+    });
+    ui.shareBannerClose.addEventListener("click", () => ui.shareBanner.classList.add("hidden"));
 
     if (ui.rotateOverlay) {
       ui.rotateOverlay.addEventListener("click", detectLayout);
@@ -2337,12 +2610,7 @@
       return;
     }
     if (state.shiftEnded) {
-      ui.eventOverlay.classList.remove("hidden");
-      ui.eventTitle.textContent = "SHIFT COMPLETE";
-      ui.eventText.textContent = `Final Score: ${state.score} | High Score: ${state.highScore}`;
-      ui.eventMeta.textContent = "Press R or tap below to run it back.";
-      ui.eventActionBtn.disabled = false;
-      ui.eventActionBtn.textContent = "Run It Back";
+      ui.eventOverlay.classList.add("hidden");
       return;
     }
     if (state.paused) {
@@ -2595,6 +2863,8 @@
   window.advanceTime = advanceTime;
 
   loadStorage();
+  renderHighScoresTable();
+  handleShareBannerFromUrl();
   touchState.leftHanded = !!state.settings.leftHanded;
   setupMotionPreferenceListener();
   detectLayout();
