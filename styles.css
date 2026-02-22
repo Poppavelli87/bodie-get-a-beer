@@ -1182,71 +1182,100 @@ body[data-layout="mobilePortraitBlocked"] {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-body[data-layout="mobileLandscape3"] {
-  font-size: clamp(12px, 1.9vw, 16px);
-}
-
-body[data-layout="mobileLandscape3"] .game-shell {
-  max-width: none;
-  width: 100vw;
-  height: 100vh;
-  padding: max(0.45rem, env(safe-area-inset-top)) 0.5rem max(0.45rem, env(safe-area-inset-bottom));
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 0.45rem;
-  touch-action: none;
-}
-
-body[data-layout="mobileLandscape3"] .top-bar {
-  margin-bottom: 0;
-  gap: 0.45rem;
-}
-
-body[data-layout="mobileLandscape3"] .title-block h1 {
-  font-size: clamp(1rem, 2.7vw, 1.3rem);
-}
-
-body[data-layout="mobileLandscape3"] .title-block p,
-body[data-layout="mobileLandscape3"] .control-help {
-  display: none;
-}
-
-body[data-layout="mobileLandscape3"] .header-buttons {
-  gap: 0.35rem;
-}
-
-body[data-layout="mobileLandscape3"] .hud-btn {
-  min-width: 0;
-  padding: 0.38rem 0.5rem;
-  min-height: 44px;
-}
-
-body[data-layout="mobileLandscape3"] .hud-grid {
-  margin-bottom: 0;
-  grid-template-columns: repeat(4, minmax(82px, 1fr));
-  gap: 0.35rem;
-}
-
-body[data-layout="mobileLandscape3"] .stat-card,
-body[data-layout="mobileLandscape3"] .meter-card {
-  padding: 0.35rem 0.45rem;
-}
-
-body[data-layout="mobileLandscape3"] .main-grid {
-  display: none;
-}
-
-body[data-layout="mobileLandscape3"] .mobile-arena {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: var(--left-panel-w, 22vw) minmax(220px, 1fr) var(--right-panel-w, 22vw);
-  gap: 0.45rem;
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
 
-body[data-layout="mobileLandscape3"][data-left-handed="true"] .mobile-arena {
-  grid-template-columns: var(--right-panel-w, 22vw) minmax(220px, 1fr) var(--left-panel-w, 22vw);
+body[data-layout="mobileLandscape3"] {
+  --pad: 10px;
+  --gap: 10px;
+  --fontBase: clamp(12px, 1.5vw, 14px);
+  --fontSmall: clamp(11px, 1.2vw, 12px);
+  --radius: 10px;
+  --btnH: 44px;
+  font-size: var(--fontBase);
+  overscroll-behavior: none;
+}
+
+body[data-layout="mobileLandscape3"][data-tight="1"] {
+  --pad: 6px;
+  --gap: 6px;
+  --btnH: 40px;
+}
+
+body[data-layout="mobileLandscape3"] .game-shell {
+  max-width: none;
+  width: 100%;
+  height: var(--vvh, 100dvh);
+  padding: max(var(--pad), env(safe-area-inset-top)) var(--pad) max(var(--pad), env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-rows: minmax(44px, auto) minmax(48px, auto) minmax(0, 1fr);
+  gap: var(--gap);
+  touch-action: none;
+  overflow: hidden;
+}
+
+body[data-layout="mobileLandscape3"] #hudRow,
+body[data-layout="mobileLandscape3"] #statsRow,
+body[data-layout="mobileLandscape3"] .main-grid { min-height: 0; }
+
+body[data-layout="mobileLandscape3"] .top-bar {
+  margin-bottom: 0;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.micro-hud-row { display: none; }
+.gear-menu {
+  position: absolute;
+  right: var(--pad);
+  top: calc(44px + var(--gap));
+  display: grid;
+  gap: 6px;
+  background: rgba(15, 23, 30, 0.95);
+  border: 2px solid #6d7a84;
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 30;
+}
+.gear-title { margin: 0; color: #fff; font-size: 12px; font-weight: 700; }
+
+body[data-layout="mobileLandscape3"] .title-block h1 {
+  font-size: clamp(1rem, 2.4vw, 1.22rem);
+}
+
+body[data-layout="mobileLandscape3"] .title-block p,
+body[data-layout="mobileLandscape3"] .control-help,
+body[data-layout="mobileLandscape3"] .mobile-arena,
+body[data-layout="mobileLandscape3"] .action-dock,
+body[data-layout="mobileLandscape3"] #actionPauseBtn {
+  display: none;
+}
+
+body[data-layout="mobileLandscape3"] .header-buttons { gap: 6px; }
+body[data-layout="mobileLandscape3"] .hud-btn,
+body[data-layout="mobileLandscape3"] button { min-height: var(--btnH); }
+
+body[data-layout="mobileLandscape3"] .hud-grid {
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+body[data-layout="mobileLandscape3"] .stat-card,
+body[data-layout="mobileLandscape3"] .meter-card {
+  padding: 6px 8px;
+  border-radius: var(--radius);
+}
+
+body[data-layout="mobileLandscape3"] .main-grid {
+  display: grid;
+  grid-template-columns: clamp(200px, 28vw, 320px) minmax(200px, clamp(220px, 36vw, 520px)) clamp(200px, 28vw, 320px);
+  gap: var(--gap);
+  min-height: 0;
+  overflow: hidden;
 }
 
 body[data-layout="mobileLandscape3"] .panel {
@@ -1254,89 +1283,94 @@ body[data-layout="mobileLandscape3"] .panel {
   height: 100%;
   overflow: hidden;
 }
-
+body[data-layout="mobileLandscape3"] .action-panel { overflow: hidden; }
 body[data-layout="mobileLandscape3"] .queue-panel { grid-column: 1; }
 body[data-layout="mobileLandscape3"] .stage-panel { grid-column: 2; display: flex; }
 body[data-layout="mobileLandscape3"] .action-panel { grid-column: 3; }
 body[data-layout="mobileLandscape3"] .main-grid > .log-panel { display: none; }
 
-body[data-layout="mobileLandscape3"] .panel-head {
-  padding: 0.45rem 0.55rem;
-}
-
-body[data-layout="mobileLandscape3"] .panel-head p {
-  font-size: clamp(0.72rem, 1.8vw, 0.84rem);
-}
-
-body[data-layout="mobileLandscape3"] .car-queue,
-body[data-layout="mobileLandscape3"] .log-feed,
-body[data-layout="mobileLandscape3"] .action-panel {
-  min-height: 0;
-}
+body[data-layout="mobileLandscape3"] .panel-head { padding: 6px 8px; }
+body[data-layout="mobileLandscape3"] .panel-head p { font-size: var(--fontSmall); }
 
 body[data-layout="mobileLandscape3"] .car-queue,
 body[data-layout="mobileLandscape3"] .log-feed {
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-}
-
-body[data-layout="mobileLandscape3"] .action-panel {
-  overflow-y: auto;
+  min-height: 0;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
 
 body[data-layout="mobileLandscape3"] .action-sticky-row {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  position: static;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
-
-body[data-layout="mobileLandscape3"] .action-group {
-  padding: 0.5rem 0.6rem;
-}
-
-body[data-layout="mobileLandscape3"] .bodie-stage {
-  height: min(40vh, 220px);
-}
-
-body[data-layout="mobileLandscape3"] .mobile-now-doing {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.45rem 0.55rem;
-  margin: 0.45rem 0.6rem 0.25rem;
-  background: rgba(255, 255, 255, 0.92);
-  border: 2px solid #c7ba9f;
-  border-radius: 10px;
-  font-size: clamp(0.72rem, 1.8vw, 0.9rem);
-}
-
-body[data-layout="mobileLandscape3"] #actionStatus {
-  font-weight: 700;
-}
-
 
 body[data-layout="mobileLandscape3"] .action-panel > .log-panel {
   display: flex;
-  margin: 0.5rem;
-  min-height: 130px;
-  max-height: 28vh;
+  margin: 6px;
+  min-height: 110px;
+  max-height: 38%;
   border-width: 2px;
 }
+body[data-layout="mobileLandscape3"] .action-panel.log-expanded > .log-panel { max-height: 58%; }
+body[data-layout="mobileLandscape3"] .action-group { padding: 6px 8px; }
+body[data-layout="mobileLandscape3"] .action-group.bodie-group,
+body[data-layout="mobileLandscape3"] .action-group:nth-last-child(2) { display: none; }
+body[data-layout="mobileLandscape3"] .action-group:first-of-type .beer-list { grid-template-columns: 1fr; }
+body[data-layout="mobileLandscape3"] .bonus-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-body[data-layout="mobileLandscape3"] .action-panel > .log-panel .panel-head {
-  padding: 0.35rem 0.45rem;
+body[data-layout="mobileLandscape3"][data-tight="1"] #hudRow { max-height: 44px; }
+body[data-layout="mobileLandscape3"][data-tight="1"] #statsRow { max-height: 56px; }
+body[data-layout="mobileLandscape3"][data-tight="1"] .title-block,
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons #soundToggle,
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons #compactModeToggle,
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons #portraitPauseToggle,
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons #mobileLayoutToggle,
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons #banterToggle,
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons #banterFrequencyToggle { display: none; }
+body[data-layout="mobileLandscape3"][data-tight="1"] .micro-hud-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 4px;
+  width: 100%;
+  color: #fff;
+  font-size: var(--fontSmall);
+  font-weight: 800;
+}
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons { margin-left: auto; }
+body[data-layout="mobileLandscape3"][data-tight="1"] #headerButtons .hud-btn { min-width: 40px; padding: 4px 7px; }
+body[data-layout="mobileLandscape3"][data-tight="1"] #statsRow {
+  grid-template-columns: repeat(4, 1fr);
+  align-content: start;
+}
+body[data-layout="mobileLandscape3"][data-tight="1"] #highScoreCard { display: none; }
+body[data-layout="mobileLandscape3"][data-tight="1"] .stat-card p { font-size: 1rem; margin-top: 2px; }
+body[data-layout="mobileLandscape3"][data-tight="1"] .meter-track { height: 10px; }
+body[data-layout="mobileLandscape3"][data-tight="1"] .meter-card:last-child { display: none; }
+body[data-layout="mobileLandscape3"][data-tight="1"] .stat-card.wide { display: none; }
+body[data-layout="mobileLandscape3"][data-tight="1"] #streakValue.active { display: inline-block; }
+body[data-layout="mobileLandscape3"][data-tight="1"] #statsRow::after {
+  content: attr(data-inline-high);
+  grid-column: 4;
+  font-size: var(--fontSmall);
+  color: #23333f;
+  font-weight: 800;
+  align-self: center;
+  justify-self: end;
 }
 
-body[data-layout="mobileLandscape3"] .action-panel > .log-panel .log-feed {
-  padding: 0.35rem;
-  font-size: 0.8rem;
-}
-
-body[data-layout="mobileLandscape3"] .event-overlay {
-  backdrop-filter: blur(2px);
+.layout-debug {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 60;
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 8px;
 }
 
 body[data-layout="desktop"] .stage-panel,

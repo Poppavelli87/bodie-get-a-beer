@@ -317,6 +317,7 @@
       leftHanded: false,
       bodieBanter: true,
       banterFrequency: "normal",
+      showLayoutDebug: false,
     },
     rngSeed: 0x43f4b6d1,
     uiPanels: { queueOpen: true, actionOpen: true, logOpen: false, initialized: false },
@@ -401,6 +402,16 @@
     mobileHeartsHud: document.getElementById("mobileHeartsHud"),
     mobileBaconHud: document.getElementById("mobileBaconHud"),
     mobileLevelHud: document.getElementById("mobileLevelHud"),
+
+    gearMenuBtn: document.getElementById("gearMenuBtn"),
+    gearMenu: document.getElementById("gearMenu"),
+    debugToggle: document.getElementById("debugToggle"),
+    layoutDebug: document.getElementById("layoutDebug"),
+    microScore: document.getElementById("microScore"),
+    microTime: document.getElementById("microTime"),
+    microMult: document.getElementById("microMult"),
+    statsRow: document.getElementById("statsRow"),
+    logExpandToggle: document.getElementById("logExpandToggle"),
     openHighScoresBtn: document.getElementById("openHighScoresBtn"),
     shareBanner: document.getElementById("shareBanner"),
     shareBannerText: document.getElementById("shareBannerText"),
@@ -438,6 +449,7 @@
   let lastFrameTs = performance.now();
   let accumulatorMs = 0;
   let lastRotateOverlayFrame = 0;
+  let viewportInfo = { width: window.innerWidth, height: window.innerHeight, tightLandscape: false };
 
   const BASE_W = 960;
   const BASE_H = 540;
@@ -545,11 +557,22 @@
     }
   }
 
+  function updateViewportVars() {
+    const width = window.visualViewport ? Math.round(window.visualViewport.width) : window.innerWidth;
+    const height = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
+    document.documentElement.style.setProperty("--vvh", `${height}px`);
+    document.documentElement.style.setProperty("--vvw", `${width}px`);
+    viewportInfo.width = width;
+    viewportInfo.height = height;
+    return { width, height };
+  }
+
   function detectLayout() {
-    const vw = window.visualViewport ? Math.round(window.visualViewport.width) : window.innerWidth;
-    const vh = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
+    const { width: vw, height: vh } = updateViewportVars();
     const mobile = isMobileDevice();
-    const landscape = isLandscapeOrientation();
+    const landscape = vw >= vh;
+    const tightLandscape = mobile && landscape && (vh <= 420 || (vh / Math.max(1, vw)) <= 0.42);
+    viewportInfo.tightLandscape = tightLandscape;
     if (!mobile) {
       currentLayout = "desktop";
     } else {
@@ -578,6 +601,7 @@
     }
 
     document.body.dataset.layout = currentLayout;
+    document.body.dataset.tight = tightLandscape ? "1" : "0";
     document.body.dataset.touch = String(isTouchDevice());
     document.body.dataset.rotateBlocked = String(isRotateBlocked);
     document.body.dataset.mobileEffects = mobile ? "reduced" : "full";
@@ -2161,6 +2185,7 @@
     window.addEventListener("orientationchange", detectLayout);
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", detectLayout);
+      window.visualViewport.addEventListener("scroll", detectLayout);
     }
 
     document.addEventListener("visibilitychange", () => {
@@ -2192,6 +2217,27 @@
         fn();
       });
     };
+
+
+    ui.gearMenuBtn.addEventListener("click", () => {
+      const open = ui.gearMenu.hasAttribute("hidden");
+      if (open) ui.gearMenu.removeAttribute("hidden");
+      else ui.gearMenu.setAttribute("hidden", "");
+      ui.gearMenuBtn.setAttribute("aria-expanded", String(open));
+    });
+
+    ui.debugToggle.addEventListener("click", () => {
+      state.settings.showLayoutDebug = !state.settings.showLayoutDebug;
+      saveSettings();
+    });
+
+    if (ui.logExpandToggle) {
+      ui.logExpandToggle.addEventListener("click", () => {
+        ui.actionPanel.classList.toggle("log-expanded");
+        const expanded = ui.actionPanel.classList.contains("log-expanded");
+        ui.logExpandToggle.setAttribute("aria-expanded", String(expanded));
+      });
+    }
 
     tapAndRun(ui.pauseBtn, togglePause);
     tapAndRun(ui.resetBtn, () => resetRun(false));
@@ -2489,7 +2535,9 @@
   function renderLogs() {
     const signature = state.logs.map((entry) => `${entry.source}:${entry.kind}:${entry.stage}:${entry.text}`).join("|");
     if (signature === lastLogSignature) return;
-    ui.logFeed.innerHTML = state.logs
+    const tight = document.body.dataset.tight === "1" && currentLayout === "mobileLandscape3";
+    const entries = tight ? state.logs.slice(0, 8) : state.logs;
+    ui.logFeed.innerHTML = entries
       .map((entry) => {
         const classes = ["log-line"];
         if (entry.source === "bodie") {
@@ -2614,6 +2662,8 @@
     ui.banterFrequencyToggle.textContent = `Banter Frequency: ${freqLabel}`;
     ui.banterFrequencyToggle.setAttribute("aria-pressed", String(state.settings.banterFrequency === "high"));
     ui.actionPauseBtn.textContent = state.paused ? "Resume" : "Pause";
+    ui.debugToggle.textContent = `Show Layout Debug: ${state.settings.showLayoutDebug ? "On" : "Off"}`;
+    ui.debugToggle.setAttribute("aria-pressed", String(state.settings.showLayoutDebug));
   }
 
   function renderHUD() {
@@ -2622,9 +2672,11 @@
     ui.timerValue.textContent = formatClock(TUNING.RUN_DURATION_MS - state.timeMs);
     ui.multiplierValue.textContent = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
     if (state.streakTier > 0) {
-      ui.streakValue.textContent = `Tier ${state.streakTier} | ${getStreakBonus().toFixed(2)}x bonus`;
+      ui.streakValue.textContent = `Streak: ${Math.ceil(state.streakMs / 1000)}s`;
+      ui.streakValue.classList.add("active");
     } else {
-      ui.streakValue.textContent = "Keep DrunkMeter 70-85%";
+      ui.streakValue.textContent = "Keep Drunk 70-85%";
+      ui.streakValue.classList.remove("active");
     }
 
     ui.drunkMeterLabel.textContent = `${state.drunkMeter.toFixed(0)}% (BAC ${state.bac.toFixed(2)})`;
@@ -2641,7 +2693,12 @@
     const actionText = state.currentAction ? state.currentAction.label : state.paused ? "Paused" : "Idle";
     ui.mobileActionText.textContent = `Now Doing: ${actionText}`;
     ui.mobileCarText.textContent = selected ? `Car: ${selected.name}` : "Car: none";
-    ui.mobileMultiplierText.textContent = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
+    const multText = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
+    ui.mobileMultiplierText.textContent = multText;
+    if (ui.microScore) ui.microScore.textContent = `Score: ${state.score}`;
+    if (ui.microTime) ui.microTime.textContent = `Time: ${formatClock(TUNING.RUN_DURATION_MS - state.timeMs)}`;
+    if (ui.microMult) ui.microMult.textContent = multText;
+    if (ui.statsRow) ui.statsRow.dataset.inlineHigh = `High: ${state.highScore}`;
     ui.dockSelectedCar.textContent = selected ? `Selected: ${selected.name}` : "Selected: none";
     if (ui.mobileHeartsHud) ui.mobileHeartsHud.textContent = `❤️ x${Math.max(1, 3 - Math.floor(state.pukeRisk / 40))}`;
     if (ui.mobileBaconHud) ui.mobileBaconHud.textContent = `🥓 x${Math.floor(state.score / 400)}`;
@@ -2687,6 +2744,13 @@
     renderOverlay();
     renderBodie();
     renderDangerVisuals();
+    if (ui.layoutDebug) {
+      const show = !!state.settings.showLayoutDebug;
+      ui.layoutDebug.hidden = !show;
+      if (show) {
+        ui.layoutDebug.textContent = `${viewportInfo.width}x${viewportInfo.height} | tightLandscape ${viewportInfo.tightLandscape} | ${currentLayout}`;
+      }
+    }
   }
 
   function frame(ts) {
