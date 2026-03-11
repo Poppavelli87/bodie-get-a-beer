@@ -312,12 +312,8 @@
     settings: {
       soundOn: true,
       compactMode: "auto",
-      autoPauseOnPortrait: true,
-      mobile3PanelLayout: true,
-      leftHanded: false,
       bodieBanter: true,
       banterFrequency: "normal",
-      showLayoutDebug: false,
     },
     rngSeed: 0x43f4b6d1,
     uiPanels: { queueOpen: true, actionOpen: true, logOpen: false, initialized: false },
@@ -359,17 +355,10 @@
     bodieCaption: document.getElementById("bodieCaption"),
     bodieOilMeter: document.getElementById("bodieOilMeter"),
     compactModeToggle: document.getElementById("compactModeToggle"),
-    mobileLayoutToggle: document.getElementById("mobileLayoutToggle"),
-    portraitPauseToggle: document.getElementById("portraitPauseToggle"),
     banterToggle: document.getElementById("banterToggle"),
     banterFrequencyToggle: document.getElementById("banterFrequencyToggle"),
     actionPauseBtn: document.getElementById("actionPauseBtn"),
     layoutIndicator: document.getElementById("layoutIndicator"),
-    rotateOverlay: document.getElementById("rotateOverlay"),
-    mobileNowDoing: document.getElementById("mobileNowDoing"),
-    mobileActionText: document.getElementById("mobileActionText"),
-    mobileCarText: document.getElementById("mobileCarText"),
-    mobileMultiplierText: document.getElementById("mobileMultiplierText"),
     queuePanel: document.getElementById("queuePanel"),
     stagePanel: document.getElementById("stagePanel"),
     stagePanelSlot: document.getElementById("stagePanelSlot"),
@@ -378,40 +367,6 @@
     queuePanelToggle: document.getElementById("queuePanelToggle"),
     actionPanelToggle: document.getElementById("actionPanelToggle"),
     logPanelToggle: document.getElementById("logPanelToggle"),
-    actionDock: document.getElementById("actionDock"),
-    mobileBeerSegment: document.getElementById("mobileBeerSegment"),
-    dockDrinkBtn: document.getElementById("dockDrinkBtn"),
-    dockFixBtn: document.getElementById("dockFixBtn"),
-    dockCigBtn: document.getElementById("dockCigBtn"),
-    dockDabBtn: document.getElementById("dockDabBtn"),
-    dockThingBtn: document.getElementById("dockThingBtn"),
-    dockPauseBtn: document.getElementById("dockPauseBtn"),
-    dockSelectedCar: document.getElementById("dockSelectedCar"),
-    mobileCarQuickSelect: document.getElementById("mobileCarQuickSelect"),
-    mobileArena: document.getElementById("mobileArena"),
-    mobilePanelLeft: document.getElementById("mobilePanelLeft"),
-    mobilePanelCenter: document.getElementById("mobilePanelCenter"),
-    mobilePanelRight: document.getElementById("mobilePanelRight"),
-    gameCanvas: document.getElementById("gameCanvas"),
-    leftPadCanvas: document.getElementById("leftPadCanvas"),
-    mobilePauseBtn: document.getElementById("mobilePauseBtn"),
-    mobileJumpBtn: document.getElementById("mobileJumpBtn"),
-    mobileSpecialBtn: document.getElementById("mobileSpecialBtn"),
-    leftHandToggle: document.getElementById("leftHandToggle"),
-    rotateHintCanvas: document.getElementById("rotateHintCanvas"),
-    mobileHeartsHud: document.getElementById("mobileHeartsHud"),
-    mobileBaconHud: document.getElementById("mobileBaconHud"),
-    mobileLevelHud: document.getElementById("mobileLevelHud"),
-
-    gearMenuBtn: document.getElementById("gearMenuBtn"),
-    gearMenu: document.getElementById("gearMenu"),
-    debugToggle: document.getElementById("debugToggle"),
-    layoutDebug: document.getElementById("layoutDebug"),
-    microScore: document.getElementById("microScore"),
-    microTime: document.getElementById("microTime"),
-    microMult: document.getElementById("microMult"),
-    statsRow: document.getElementById("statsRow"),
-    logExpandToggle: document.getElementById("logExpandToggle"),
     openHighScoresBtn: document.getElementById("openHighScoresBtn"),
     shareBanner: document.getElementById("shareBanner"),
     shareBannerText: document.getElementById("shareBannerText"),
@@ -435,59 +390,17 @@
     toast: document.getElementById("toast"),
   };
 
-  let currentLayout = "desktop";
   let reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let autoPausedByVisibility = false;
-  let autoPausedByRotateGate = false;
-  let stageGroupPlaceholder = null;
-  let actionStatusPlaceholder = null;
-  let logPanelPlaceholder = null;
   let lastQueueSignature = "";
   let lastLogSignature = "";
   let audioCtx = null;
   let rafId = 0;
   let lastFrameTs = performance.now();
   let accumulatorMs = 0;
-  let lastRotateOverlayFrame = 0;
-  let viewportInfo = { width: window.innerWidth, height: window.innerHeight, tightLandscape: false };
-
-  const BASE_W = 960;
-  const BASE_H = 540;
-  const mobileRender = {
-    dpr: 1,
-    leftPanelW: 180,
-    rightPanelW: 180,
-    centerX: 180,
-    centerW: 600,
-    centerH: 540,
-    scale: 1,
-    gameOffsetX: 180,
-    gameOffsetY: 0,
-  };
-
-  const touchState = {
-    leftHanded: false,
-    joystick: { active: false, id: null, baseX: 0, baseY: 0, dx: 0, dy: 0 },
-    rightTouches: new Map(),
-  };
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
-  }
-
-  function isTouchDevice() {
-    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
-  }
-
-  function isProbablyMobileUA() {
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-  }
-
-  function isLandscapeOrientation() {
-    if (window.screen?.orientation?.type) {
-      return window.screen.orientation.type.includes("landscape");
-    }
-    return window.matchMedia("(orientation: landscape)").matches;
   }
 
   function isSmallViewport() {
@@ -496,247 +409,18 @@
     return Math.min(vw, vh) < 800;
   }
 
-  function isMobileDevice() {
-    return (window.matchMedia("(pointer: coarse)").matches || isProbablyMobileUA()) && isSmallViewport();
-  }
-
-  function isMobileLayout() {
-    return currentLayout !== "desktop";
-  }
-
-  function isPortraitBlockedLayout() {
-    return currentLayout === "mobilePortraitBlocked";
-  }
-
   function getCompactModeEnabled() {
     if (state.settings.compactMode === "on") return true;
     if (state.settings.compactMode === "off") return false;
     return isSmallViewport();
   }
 
-  function moveStageBlocksIntoMobilePanel(enableMobileStage) {
-    const bodieGroup = ui.actionPanel.querySelector(".bodie-group");
-    const actionStatusGroup = ui.actionStatus ? ui.actionStatus.closest(".action-group") : null;
-    if (!bodieGroup || !actionStatusGroup) {
-      return;
-    }
-    if (enableMobileStage) {
-      if (!stageGroupPlaceholder) {
-        stageGroupPlaceholder = document.createComment("bodie-group-placeholder");
-        bodieGroup.parentNode.insertBefore(stageGroupPlaceholder, bodieGroup);
-      }
-      if (!actionStatusPlaceholder) {
-        actionStatusPlaceholder = document.createComment("action-status-placeholder");
-        actionStatusGroup.parentNode.insertBefore(actionStatusPlaceholder, actionStatusGroup);
-      }
-      if (!logPanelPlaceholder) {
-        logPanelPlaceholder = document.createComment("log-panel-placeholder");
-        ui.logPanel.parentNode.insertBefore(logPanelPlaceholder, ui.logPanel);
-      }
-      if (bodieGroup.parentNode !== ui.stagePanelSlot) {
-        ui.stagePanelSlot.appendChild(ui.mobileNowDoing);
-        ui.stagePanelSlot.appendChild(bodieGroup);
-        ui.stagePanelSlot.appendChild(actionStatusGroup);
-      }
-      if (ui.logPanel.parentNode !== ui.actionPanel) {
-        ui.actionPanel.appendChild(ui.logPanel);
-      }
-      return;
-    }
-    if (stageGroupPlaceholder?.parentNode && bodieGroup.parentNode !== stageGroupPlaceholder.parentNode) {
-      stageGroupPlaceholder.parentNode.insertBefore(bodieGroup, stageGroupPlaceholder.nextSibling);
-    }
-    if (actionStatusPlaceholder?.parentNode && actionStatusGroup.parentNode !== actionStatusPlaceholder.parentNode) {
-      actionStatusPlaceholder.parentNode.insertBefore(actionStatusGroup, actionStatusPlaceholder.nextSibling);
-    }
-    if (logPanelPlaceholder?.parentNode && ui.logPanel.parentNode !== logPanelPlaceholder.parentNode) {
-      logPanelPlaceholder.parentNode.insertBefore(ui.logPanel, logPanelPlaceholder.nextSibling);
-    }
-    if (ui.mobileNowDoing.parentNode !== ui.gameShell) {
-      ui.gameShell.insertBefore(ui.mobileNowDoing, ui.gameShell.querySelector(".hud-grid"));
-    }
-  }
-
-  function updateViewportVars() {
-    const width = window.visualViewport ? Math.round(window.visualViewport.width) : window.innerWidth;
-    const height = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
-    document.documentElement.style.setProperty("--vvh", `${height}px`);
-    document.documentElement.style.setProperty("--vvw", `${width}px`);
-    viewportInfo.width = width;
-    viewportInfo.height = height;
-    return { width, height };
-  }
-
-  function detectLayout() {
-    const { width: vw, height: vh } = updateViewportVars();
-    const mobile = isMobileDevice();
-    const landscape = vw >= vh;
-    const tightLandscape = mobile && landscape && (vh <= 420 || (vh / Math.max(1, vw)) <= 0.42);
-    viewportInfo.tightLandscape = tightLandscape;
-    if (!mobile) {
-      currentLayout = "desktop";
-    } else {
-      currentLayout = landscape && state.settings.mobile3PanelLayout ? "mobileLandscape3" : landscape ? "desktop" : "mobilePortraitBlocked";
-    }
-
-    const isRotateBlocked = currentLayout === "mobilePortraitBlocked";
-    if (isRotateBlocked && state.settings.autoPauseOnPortrait && !state.paused && !state.shiftEnded && !state.event) {
-      state.paused = true;
-      autoPausedByRotateGate = true;
-      if (audioCtx && audioCtx.state === "running") {
-        audioCtx.suspend().catch(() => {});
-      }
-      addLog("Auto-paused in portrait. Bodie needs landscape.");
-    } else if (!isRotateBlocked && autoPausedByRotateGate && !state.shiftEnded && !state.event) {
-      state.paused = false;
-      autoPausedByRotateGate = false;
-      if (audioCtx && audioCtx.state === "suspended") {
-        audioCtx.resume().catch(() => {});
-      }
-      addLog("Landscape restored. Back to wrenching.");
-    }
-
-    if (!isRotateBlocked) {
-      autoPausedByRotateGate = false;
-    }
-
-    document.body.dataset.layout = currentLayout;
-    document.body.dataset.tight = tightLandscape ? "1" : "0";
-    document.body.dataset.touch = String(isTouchDevice());
-    document.body.dataset.rotateBlocked = String(isRotateBlocked);
-    document.body.dataset.mobileEffects = mobile ? "reduced" : "full";
+  function applyLayoutState() {
+    document.body.dataset.layout = "desktop";
     document.body.dataset.compact = String(getCompactModeEnabled());
-    document.body.dataset.leftHanded = String(touchState.leftHanded);
-    ui.rotateOverlay.setAttribute("aria-hidden", String(!isRotateBlocked));
-    ui.layoutIndicator.textContent = `Landscape Mode: ${currentLayout === "desktop" ? "Desktop" : isRotateBlocked ? "Rotate Required" : "Mobile 3-Panel"}`;
-    moveStageBlocksIntoMobilePanel(currentLayout === "mobileLandscape3");
-    computeMobileLayout(vw, vh);
-  }
-
-  function computeMobileLayout(vw, vh) {
-    if (!ui.gameCanvas) return;
-    const W = vw || window.innerWidth;
-    const H = vh || window.innerHeight;
-    const leftPanelW = clamp(W * 0.22, 140, 260);
-    const rightPanelW = clamp(W * 0.22, 140, 260);
-    const centerW = Math.max(220, W - leftPanelW - rightPanelW);
-    const centerH = H;
-    const centerX = touchState.leftHanded ? rightPanelW : leftPanelW;
-    const scale = Math.min(centerW / BASE_W, centerH / BASE_H);
-    const gameOffsetX = centerX + (centerW - BASE_W * scale) / 2;
-    const gameOffsetY = (centerH - BASE_H * scale) / 2;
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-
-    Object.assign(mobileRender, { dpr, leftPanelW, rightPanelW, centerW, centerH, centerX, scale, gameOffsetX, gameOffsetY });
-
-    ui.gameCanvas.width = Math.floor(W * dpr);
-    ui.gameCanvas.height = Math.floor(H * dpr);
-    ui.gameCanvas.style.width = `${W}px`;
-    ui.gameCanvas.style.height = `${H}px`;
-
-    if (ui.leftPadCanvas) {
-      const side = Math.floor(Math.min(leftPanelW - 24, H * 0.55));
-      ui.leftPadCanvas.width = Math.max(160, side * dpr);
-      ui.leftPadCanvas.height = Math.max(160, side * dpr);
-      ui.leftPadCanvas.style.width = `${Math.max(160, side)}px`;
-      ui.leftPadCanvas.style.height = `${Math.max(160, side)}px`;
+    if (ui.layoutIndicator) {
+      ui.layoutIndicator.textContent = "Desktop";
     }
-
-    document.documentElement.style.setProperty("--left-panel-w", `${Math.round(leftPanelW)}px`);
-    document.documentElement.style.setProperty("--right-panel-w", `${Math.round(rightPanelW)}px`);
-  }
-
-  function vibratePulse(ms) {
-    if (reduceMotion || typeof navigator.vibrate !== "function") return;
-    navigator.vibrate(ms);
-  }
-
-  function renderRotateHint(ts = performance.now()) {
-    if (!ui.rotateHintCanvas) return;
-    const ctx = ui.rotateHintCanvas.getContext("2d");
-    if (!ctx) return;
-    const w = ui.rotateHintCanvas.width;
-    const h = ui.rotateHintCanvas.height;
-    const t = ts * 0.002;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, 70, 0, Math.PI*2);
-    ctx.fill();
-    ctx.save();
-    ctx.translate(w / 2, h / 2);
-    ctx.rotate(Math.sin(t) * 0.8);
-    ctx.fillStyle = "#f5d7a4";
-    ctx.fillRect(-22, -36, 44, 72);
-    ctx.clearRect(-16, -29, 32, 50);
-    ctx.restore();
-    ctx.strokeStyle = "#f5d7a4";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, 56, -0.5, 1.8);
-    ctx.stroke();
-  }
-
-  function renderMobileCanvas() {
-    if (!ui.gameCanvas || currentLayout !== "mobileLandscape3") return;
-    const ctx = ui.gameCanvas.getContext("2d", { alpha: false });
-    if (!ctx) return;
-    const { dpr, leftPanelW, rightPanelW, centerX, centerW, centerH, scale, gameOffsetX, gameOffsetY } = mobileRender;
-    const W = ui.gameCanvas.width / dpr;
-    const H = ui.gameCanvas.height / dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, W, H);
-
-    const leftX = touchState.leftHanded ? W - leftPanelW : 0;
-    const rightX = touchState.leftHanded ? 0 : W - rightPanelW;
-
-    const leftGrad = ctx.createLinearGradient(leftX, 0, leftX + leftPanelW, H);
-    leftGrad.addColorStop(0, "#4e3220"); leftGrad.addColorStop(1, "#2d2017");
-    ctx.fillStyle = leftGrad; ctx.fillRect(leftX, 0, leftPanelW, H);
-    const rightGrad = ctx.createLinearGradient(rightX, 0, rightX + rightPanelW, H);
-    rightGrad.addColorStop(0, "#2a2635"); rightGrad.addColorStop(1, "#1b1a24");
-    ctx.fillStyle = rightGrad; ctx.fillRect(rightX, 0, rightPanelW, H);
-
-    ctx.fillStyle = "#121a24";
-    ctx.fillRect(centerX, 0, centerW, centerH);
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(centerX, 0, 2, H);
-    ctx.fillRect(centerX + centerW - 2, 0, 2, H);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(centerX, 0, centerW, centerH);
-    ctx.clip();
-    ctx.fillStyle = "#1e2d3b";
-    ctx.fillRect(centerX, 0, centerW, centerH);
-
-    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, gameOffsetX * dpr, gameOffsetY * dpr);
-    ctx.fillStyle = "#2e78d1";
-    ctx.fillRect(0, 0, BASE_W, BASE_H);
-    ctx.fillStyle = "#7cb4ff";
-    for (let i = 0; i < 14; i += 1) ctx.fillRect((i * 72 + (state.timeMs * 0.03) % 72), 80 + (i % 3) * 32, 22, 10);
-    ctx.fillStyle = "#f4efe2";
-    ctx.fillRect(80 + (state.timeMs * 0.12) % 700, 340, 80, 80);
-    ctx.restore();
-  }
-
-  function renderJoystickPad() {
-    if (!ui.leftPadCanvas || currentLayout !== "mobileLandscape3") return;
-    const ctx = ui.leftPadCanvas.getContext("2d");
-    if (!ctx) return;
-    const w = ui.leftPadCanvas.width;
-    const h = ui.leftPadCanvas.height;
-    const centerX = touchState.joystick.active ? touchState.joystick.baseX : w * 0.5;
-    const centerY = touchState.joystick.active ? touchState.joystick.baseY : h * 0.62;
-    const radius = Math.min(w, h) * 0.22;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "rgba(20,20,26,0.35)";
-    ctx.beginPath(); ctx.arc(centerX, centerY, radius * 1.3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(255,226,164,0.35)";
-    ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.beginPath(); ctx.arc(centerX + touchState.joystick.dx, centerY + touchState.joystick.dy, radius * 0.45, 0, Math.PI * 2); ctx.fill();
   }
 
   function rand() {
@@ -1293,17 +977,8 @@
       if (typeof parsed.soundOn === "boolean") {
         state.settings.soundOn = parsed.soundOn;
       }
-      if (typeof parsed.autoPauseOnPortrait === "boolean") {
-        state.settings.autoPauseOnPortrait = parsed.autoPauseOnPortrait;
-      }
       if (["auto", "on", "off"].includes(parsed.compactMode)) {
         state.settings.compactMode = parsed.compactMode;
-      }
-      if (typeof parsed.mobile3PanelLayout === "boolean") {
-        state.settings.mobile3PanelLayout = parsed.mobile3PanelLayout;
-      }
-      if (typeof parsed.leftHanded === "boolean") {
-        state.settings.leftHanded = parsed.leftHanded;
       }
       if (typeof parsed.bodieBanter === "boolean") {
         state.settings.bodieBanter = parsed.bodieBanter;
@@ -1449,7 +1124,7 @@
   }
 
   function canStartAction() {
-    return state.running && !state.paused && !state.shiftEnded && !state.currentAction && !state.event && !isPortraitBlockedLayout();
+    return state.running && !state.paused && !state.shiftEnded && !state.currentAction && !state.event;
   }
 
   function startAction(payload) {
@@ -2152,10 +1827,6 @@
       return;
     }
 
-    if (isPortraitBlockedLayout()) {
-      return;
-    }
-
     if (state.event && state.event.type === "puke" && (key === " " || key === "enter")) {
       mashPuke();
       return;
@@ -2181,11 +1852,9 @@
   function bindEvents() {
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("pointerdown", ensureAudioContext, { passive: true });
-    window.addEventListener("resize", detectLayout);
-    window.addEventListener("orientationchange", detectLayout);
+    window.addEventListener("resize", applyLayoutState);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", detectLayout);
-      window.visualViewport.addEventListener("scroll", detectLayout);
+      window.visualViewport.addEventListener("resize", applyLayoutState);
     }
 
     document.addEventListener("visibilitychange", () => {
@@ -2204,12 +1873,6 @@
       }
     });
 
-    ui.gameShell.addEventListener("touchmove", (event) => {
-      if (currentLayout !== "mobileLandscape3") return;
-      if (event.target.closest(".car-queue") || event.target.closest(".log-feed")) return;
-      event.preventDefault();
-    }, { passive: false });
-
     const tapAndRun = (button, fn) => {
       button.addEventListener("click", () => {
         ensureAudioContext();
@@ -2217,27 +1880,6 @@
         fn();
       });
     };
-
-
-    ui.gearMenuBtn.addEventListener("click", () => {
-      const open = ui.gearMenu.hasAttribute("hidden");
-      if (open) ui.gearMenu.removeAttribute("hidden");
-      else ui.gearMenu.setAttribute("hidden", "");
-      ui.gearMenuBtn.setAttribute("aria-expanded", String(open));
-    });
-
-    ui.debugToggle.addEventListener("click", () => {
-      state.settings.showLayoutDebug = !state.settings.showLayoutDebug;
-      saveSettings();
-    });
-
-    if (ui.logExpandToggle) {
-      ui.logExpandToggle.addEventListener("click", () => {
-        ui.actionPanel.classList.toggle("log-expanded");
-        const expanded = ui.actionPanel.classList.contains("log-expanded");
-        ui.logExpandToggle.setAttribute("aria-expanded", String(expanded));
-      });
-    }
 
     tapAndRun(ui.pauseBtn, togglePause);
     tapAndRun(ui.resetBtn, () => resetRun(false));
@@ -2259,19 +1901,7 @@
       const next = modeOrder[(modeOrder.indexOf(state.settings.compactMode) + 1) % modeOrder.length];
       state.settings.compactMode = next;
       saveSettings();
-      detectLayout();
-    });
-
-    ui.mobileLayoutToggle.addEventListener("click", () => {
-      state.settings.mobile3PanelLayout = !state.settings.mobile3PanelLayout;
-      saveSettings();
-      detectLayout();
-    });
-
-    ui.portraitPauseToggle.addEventListener("click", () => {
-      state.settings.autoPauseOnPortrait = !state.settings.autoPauseOnPortrait;
-      saveSettings();
-      detectLayout();
+      applyLayoutState();
     });
 
     ui.banterToggle.addEventListener("click", () => {
@@ -2293,12 +1923,6 @@
     tapAndRun(ui.dabBtn, () => startBonus("dab"));
     tapAndRun(ui.thingBtn, () => startBonus("thing"));
 
-    tapAndRun(ui.dockDrinkBtn, startDrink);
-    tapAndRun(ui.dockFixBtn, startRepair);
-    tapAndRun(ui.dockCigBtn, () => startBonus("cigarette"));
-    tapAndRun(ui.dockDabBtn, () => startBonus("dab"));
-    tapAndRun(ui.dockThingBtn, () => startBonus("thing"));
-    tapAndRun(ui.dockPauseBtn, togglePause);
     tapAndRun(ui.actionPauseBtn, togglePause);
 
     const onBeerTap = (event) => {
@@ -2310,7 +1934,6 @@
       animateTapFeedback(target);
     };
     ui.beerList.addEventListener("click", onBeerTap);
-    ui.mobileBeerSegment.addEventListener("click", onBeerTap);
 
     const onCarTap = (event) => {
       const target = event.target.closest("[data-car-id]");
@@ -2321,7 +1944,6 @@
       queueBanter("car_selected", 1);
     };
     ui.carQueue.addEventListener("click", onCarTap);
-    ui.mobileCarQuickSelect.addEventListener("click", onCarTap);
 
     ui.eventActionBtn.addEventListener("click", () => {
       if (state.event && state.event.type === "puke") {
@@ -2369,77 +1991,6 @@
       showToast("High scores reset.");
     });
     ui.shareBannerClose.addEventListener("click", () => ui.shareBanner.classList.add("hidden"));
-
-    if (ui.rotateOverlay) {
-      ui.rotateOverlay.addEventListener("click", detectLayout);
-    }
-
-    tapAndRun(ui.mobilePauseBtn, togglePause);
-    tapAndRun(ui.mobileJumpBtn, () => {
-      startDrink();
-      playTone("tap");
-      vibratePulse(18);
-    });
-    tapAndRun(ui.mobileSpecialBtn, () => {
-      startBonus("thing");
-      playTone("start");
-      vibratePulse(24);
-    });
-
-    ui.leftHandToggle.addEventListener("click", () => {
-      touchState.leftHanded = !touchState.leftHanded;
-      state.settings.leftHanded = touchState.leftHanded;
-      ui.leftHandToggle.setAttribute("aria-pressed", String(touchState.leftHanded));
-      ui.leftHandToggle.textContent = `Left-handed: ${touchState.leftHanded ? "On" : "Off"}`;
-      saveSettings();
-      detectLayout();
-    });
-
-    const onLeftTouch = (event) => {
-      if (currentLayout !== "mobileLandscape3") return;
-      for (const touch of event.changedTouches) {
-        if (touchState.joystick.active) continue;
-        touchState.joystick.active = true;
-        touchState.joystick.id = touch.identifier;
-        const rect = ui.leftPadCanvas.getBoundingClientRect();
-        const scaleX = ui.leftPadCanvas.width / rect.width;
-        const scaleY = ui.leftPadCanvas.height / rect.height;
-        touchState.joystick.baseX = (touch.clientX - rect.left) * scaleX;
-        touchState.joystick.baseY = (touch.clientY - rect.top) * scaleY;
-      }
-    };
-    const onLeftMove = (event) => {
-      if (!touchState.joystick.active) return;
-      const rect = ui.leftPadCanvas.getBoundingClientRect();
-      const scaleX = ui.leftPadCanvas.width / rect.width;
-      const scaleY = ui.leftPadCanvas.height / rect.height;
-      const radius = Math.min(ui.leftPadCanvas.width, ui.leftPadCanvas.height) * 0.22;
-      for (const touch of event.changedTouches) {
-        if (touch.identifier !== touchState.joystick.id) continue;
-        const x = (touch.clientX - rect.left) * scaleX;
-        const y = (touch.clientY - rect.top) * scaleY;
-        let dx = x - touchState.joystick.baseX;
-        let dy = y - touchState.joystick.baseY;
-        const dist = Math.hypot(dx, dy);
-        if (dist > radius) {
-          const k = radius / dist;
-          dx *= k; dy *= k;
-        }
-        touchState.joystick.dx = Math.abs(dx) < radius * 0.16 ? 0 : dx;
-        touchState.joystick.dy = Math.abs(dy) < radius * 0.16 ? 0 : dy;
-      }
-      event.preventDefault();
-    };
-    const onLeftEnd = (event) => {
-      for (const touch of event.changedTouches) {
-        if (touch.identifier !== touchState.joystick.id) continue;
-        touchState.joystick = { active: false, id: null, baseX: 0, baseY: 0, dx: 0, dy: 0 };
-      }
-    };
-    ui.leftPadCanvas.addEventListener("touchstart", onLeftTouch, { passive: true });
-    ui.leftPadCanvas.addEventListener("touchmove", onLeftMove, { passive: false });
-    ui.leftPadCanvas.addEventListener("touchend", onLeftEnd, { passive: true });
-    ui.leftPadCanvas.addEventListener("touchcancel", onLeftEnd, { passive: true });
   }
 
   function renderBeerList() {
@@ -2461,12 +2012,6 @@
       })
       .join("");
     ui.beerList.innerHTML = html;
-
-    ui.mobileBeerSegment.innerHTML = DRINKS.map((beer, index) => {
-      const selected = index === state.selectedBeerIndex;
-      const short = beer.id === "craftipa" ? "IPA" : beer.name.split(" ")[0];
-      return `<button type="button" class="segment-btn ${selected ? "selected" : ""}" data-index="${index}" role="radio" aria-checked="${selected}">${short}</button>`;
-    }).join("");
   }
 
   function renderQueue() {
@@ -2525,19 +2070,12 @@
       }
       lastQueueSignature = signature;
     }
-
-    ui.mobileCarQuickSelect.innerHTML = state.carQueue
-      .slice(0, 4)
-      .map((car, idx) => `<button type="button" class="quick-car ${car.id === state.selectedCarId ? "selected" : ""}" data-car-id="${car.id}">#${idx + 1}</button>`)
-      .join("");
   }
 
   function renderLogs() {
     const signature = state.logs.map((entry) => `${entry.source}:${entry.kind}:${entry.stage}:${entry.text}`).join("|");
     if (signature === lastLogSignature) return;
-    const tight = document.body.dataset.tight === "1" && currentLayout === "mobileLandscape3";
-    const entries = tight ? state.logs.slice(0, 8) : state.logs;
-    ui.logFeed.innerHTML = entries
+    ui.logFeed.innerHTML = state.logs
       .map((entry) => {
         const classes = ["log-line"];
         if (entry.source === "bodie") {
@@ -2635,14 +2173,7 @@
     ui.thingBtn.disabled = !canAct;
     ui.cancelRepairBtn.disabled = !(state.currentAction && state.currentAction.type === "repair");
 
-    ui.dockFixBtn.disabled = ui.fixBtn.disabled;
-    ui.dockDrinkBtn.disabled = ui.drinkBtn.disabled;
-    ui.dockCigBtn.disabled = ui.cigBtn.disabled;
-    ui.dockDabBtn.disabled = ui.dabBtn.disabled;
-    ui.dockThingBtn.disabled = ui.thingBtn.disabled;
-
     ui.pauseBtn.textContent = state.paused ? "Resume (P)" : "Pause (P)";
-    ui.dockPauseBtn.textContent = state.paused ? "Resume" : "Pause";
 
     ui.soundToggle.textContent = state.settings.soundOn ? "Sound: On" : "Sound: Off";
     ui.soundToggle.setAttribute("aria-pressed", String(state.settings.soundOn));
@@ -2650,20 +2181,12 @@
     const compactText = state.settings.compactMode === "on" ? "Compact: On" : state.settings.compactMode === "off" ? "Compact: Off" : "Compact: Auto";
     ui.compactModeToggle.textContent = compactText;
     ui.compactModeToggle.setAttribute("aria-pressed", String(getCompactModeEnabled()));
-    ui.mobileLayoutToggle.textContent = `Mobile Layout: ${state.settings.mobile3PanelLayout ? "3-Panel (Recommended)" : "Classic"}`;
-    ui.mobileLayoutToggle.setAttribute("aria-pressed", String(state.settings.mobile3PanelLayout));
-    ui.leftHandToggle.textContent = `Left-handed: ${touchState.leftHanded ? "On" : "Off"}`;
-    ui.leftHandToggle.setAttribute("aria-pressed", String(touchState.leftHanded));
-    ui.portraitPauseToggle.textContent = `Auto-pause portrait: ${state.settings.autoPauseOnPortrait ? "On" : "Off"}`;
-    ui.portraitPauseToggle.setAttribute("aria-pressed", String(state.settings.autoPauseOnPortrait));
     ui.banterToggle.textContent = `Bodie Banter: ${state.settings.bodieBanter ? "On" : "Off"}`;
     ui.banterToggle.setAttribute("aria-pressed", String(state.settings.bodieBanter));
     const freqLabel = state.settings.banterFrequency.charAt(0).toUpperCase() + state.settings.banterFrequency.slice(1);
     ui.banterFrequencyToggle.textContent = `Banter Frequency: ${freqLabel}`;
     ui.banterFrequencyToggle.setAttribute("aria-pressed", String(state.settings.banterFrequency === "high"));
     ui.actionPauseBtn.textContent = state.paused ? "Resume" : "Pause";
-    ui.debugToggle.textContent = `Show Layout Debug: ${state.settings.showLayoutDebug ? "On" : "Off"}`;
-    ui.debugToggle.setAttribute("aria-pressed", String(state.settings.showLayoutDebug));
   }
 
   function renderHUD() {
@@ -2672,11 +2195,9 @@
     ui.timerValue.textContent = formatClock(TUNING.RUN_DURATION_MS - state.timeMs);
     ui.multiplierValue.textContent = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
     if (state.streakTier > 0) {
-      ui.streakValue.textContent = `Streak: ${Math.ceil(state.streakMs / 1000)}s`;
-      ui.streakValue.classList.add("active");
+      ui.streakValue.textContent = `Tier ${state.streakTier} | ${getStreakBonus().toFixed(2)}x bonus`;
     } else {
-      ui.streakValue.textContent = "Keep Drunk 70-85%";
-      ui.streakValue.classList.remove("active");
+      ui.streakValue.textContent = "Keep DrunkMeter 70-85%";
     }
 
     ui.drunkMeterLabel.textContent = `${state.drunkMeter.toFixed(0)}% (BAC ${state.bac.toFixed(2)})`;
@@ -2689,20 +2210,6 @@
     ui.selectedCarText.textContent = selected
       ? `Selected car: ${selected.name} (${selected.difficultyTier})`
       : "Selected car: none";
-
-    const actionText = state.currentAction ? state.currentAction.label : state.paused ? "Paused" : "Idle";
-    ui.mobileActionText.textContent = `Now Doing: ${actionText}`;
-    ui.mobileCarText.textContent = selected ? `Car: ${selected.name}` : "Car: none";
-    const multText = `${getDrunkMultiplier(state.drunkMeter).toFixed(1)}x`;
-    ui.mobileMultiplierText.textContent = multText;
-    if (ui.microScore) ui.microScore.textContent = `Score: ${state.score}`;
-    if (ui.microTime) ui.microTime.textContent = `Time: ${formatClock(TUNING.RUN_DURATION_MS - state.timeMs)}`;
-    if (ui.microMult) ui.microMult.textContent = multText;
-    if (ui.statsRow) ui.statsRow.dataset.inlineHigh = `High: ${state.highScore}`;
-    ui.dockSelectedCar.textContent = selected ? `Selected: ${selected.name}` : "Selected: none";
-    if (ui.mobileHeartsHud) ui.mobileHeartsHud.textContent = `❤️ x${Math.max(1, 3 - Math.floor(state.pukeRisk / 40))}`;
-    if (ui.mobileBaconHud) ui.mobileBaconHud.textContent = `🥓 x${Math.floor(state.score / 400)}`;
-    if (ui.mobileLevelHud) ui.mobileLevelHud.textContent = `Level ${1 + Math.floor(state.timeMs / 45000)}`;
   }
 
   function renderBodie() {
@@ -2717,7 +2224,7 @@
   }
 
   function renderDangerVisuals() {
-    const motionScale = reduceMotion ? 0.2 : isMobileLayout() ? 0.55 : 1;
+    const motionScale = reduceMotion ? 0.2 : 1;
     const wobble = clamp((state.drunkMeter - 76) / 24, 0, 1) * motionScale;
     const danger = clamp(
       Math.max((state.drunkMeter - 88) / 12, state.pukeRisk / TUNING.PUKERISK_MAX),
@@ -2732,8 +2239,6 @@
   }
 
   function render() {
-    renderMobileCanvas();
-    renderJoystickPad();
     renderHUD();
     renderBeerList();
     renderQueue();
@@ -2744,28 +2249,14 @@
     renderOverlay();
     renderBodie();
     renderDangerVisuals();
-    if (ui.layoutDebug) {
-      const show = !!state.settings.showLayoutDebug;
-      ui.layoutDebug.hidden = !show;
-      if (show) {
-        ui.layoutDebug.textContent = `${viewportInfo.width}x${viewportInfo.height} | tightLandscape ${viewportInfo.tightLandscape} | ${currentLayout}`;
-      }
-    }
   }
 
   function frame(ts) {
     const delta = Math.min(120, ts - lastFrameTs);
     lastFrameTs = ts;
     if (document.visibilityState !== "hidden") {
-      if (isPortraitBlockedLayout()) {
-        if (ts - lastRotateOverlayFrame > 48) {
-          renderRotateHint(ts);
-          lastRotateOverlayFrame = ts;
-        }
-      } else {
-        tick(delta);
-        render();
-      }
+      tick(delta);
+      render();
     }
     rafId = requestAnimationFrame(frame);
   }
@@ -2865,25 +2356,10 @@
   loadStorage();
   renderHighScoresTable();
   handleShareBannerFromUrl();
-  touchState.leftHanded = !!state.settings.leftHanded;
   setupMotionPreferenceListener();
-  detectLayout();
+  applyLayoutState();
   resetRun(true);
   bindEvents();
   startLoop();
   render();
-
-  /*
-    Mobile landscape-first update summary:
-    - Added mobile orientation gate with animated rotate overlay and low-cost portrait loop.
-    - Added mobile 3-panel arena (left movement, center canvas viewport, right actions/HUD).
-    - Added center-region scale math + DPR crisp canvas rendering + panel clipping.
-    - Added joystick touch handling, jump/special/pause touch actions, haptics + UI tones.
-    - Added settings toggles for mobile 3-panel mode and left-handed mode swap.
-
-    Quick rotate test (iOS/Android):
-    1) Open game on phone in portrait: verify rotate overlay shows and game is paused.
-    2) Rotate to landscape: overlay fades away and 3-panel layout appears.
-    3) Tap Jump/Special/Pause + move joystick area; verify feedback/haptics and resumed gameplay.
-  */
 })();

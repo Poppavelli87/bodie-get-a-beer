@@ -87,38 +87,6 @@ Log styling now adds subtle stage-based text effects for Bodie lines (mild jitte
 - **Disheveled progression:** Bodie’s hair, eyes, posture tilt/wobble, face flush, shirt tuck, and foam drip react live to intoxication (`BAC`/DrunkMeter). Higher drunkenness levels make him increasingly gremlin-coded.
 - **Repair styles:** Repairs now use style-specific animation sub-modes (`repairing_wrench`, `repairing_pour`, `repairing_hammer`, `repairing_wiring`) selected per car/tier/type. The final 20% of a repair increases animation intensity for dramatic comedic tension.
 
-## Mobile: Landscape Only
-
-Mobile mode now uses orientation gating + a desktop-like 3-panel landscape layout.
-
-- **Mobile detection (no UA sniffing)**
-  - A device is treated as mobile when touch-capable **and** the smaller viewport dimension is `< 800px`.
-- **Portrait is blocked**
-  - Portrait shows a full-screen **Rotate to Play** overlay with animated CSS phone icon.
-  - Gameplay input is blocked in portrait.
-  - Optional setting: **Auto-pause portrait** (default ON, saved in `localStorage`).
-  - With auto-pause ON, game pauses in portrait and resumes on landscape without reset.
-  - With auto-pause OFF, portrait still blocks input, but pause state is not forced.
-- **Landscape 3-panel layout (mobileLandscape3)**
-  - Uses `VisualViewport` (when available) to set `--vvh/--vvw` CSS vars for real in-app browser viewport sizing.
-  - Root layout is grid rows: **HUD**, **stats**, then **3-panel area (`1fr`)**.
-  - 3 columns below are clamped to remain visible without horizontal scrolling:
-    1. **Queue** (left, internal vertical scroll)
-    2. **Bodie Stage + status** (center)
-    3. **Actions + compact Log** (right)
-- **Tight landscape tier**
-  - Triggered when `isMobile && isLandscape && (vh <= 420 || vh/vw <= 0.42)`.
-  - Exposed as `body[data-tight="1"]` while retaining `data-layout="mobileLandscape3"`.
-  - Collapses to a micro HUD, slimmer meters, inline high score, and compressed spacing while preserving tappable buttons (`40px+`).
-  - Only queue/log scroll internally; page scroll is locked.
-- **Action panel in tight mode**
-  - Prioritizes **Fix/Drink** buttons first, keeps bonus actions compact, and limits log to the most recent entries with an **Expand** toggle.
-- **Touch + performance tweaks**
-  - `html, body` lock to viewport height with `overflow: hidden`.
-  - `touch-action: none` on game shell in mobile landscape to prevent accidental page scrolling/zoom.
-  - Queue/log keep `touch-action: pan-y` for internal scroll.
-  - Added optional in-game **Layout Debug** overlay in the gear menu.
-
 ## Sharing Scores
 
 - At shift end, open **Results** and hit **Share**.
@@ -137,7 +105,6 @@ Mobile mode now uses orientation gating + a desktop-like 3-panel landscape layou
 - `T` do a thing
 - `P` pause
 - `R` reset run
-- Touch: tap buttons/cards
 
 Extra accessibility keys:
 
@@ -154,7 +121,7 @@ Stored in `localStorage`:
 - Top-10 high score list (`bodie_highscores_v1`)
 - Last entered player name (`bodie_player_name`)
 - Sound setting
-- UI settings (compact mode + auto-pause portrait + banter toggles)
+- UI settings (compact mode + banter toggles)
 
 ## Design Notes
 
